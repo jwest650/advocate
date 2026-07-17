@@ -7,10 +7,19 @@ use Illuminate\Support\Str;
 
 class LandingPageCustomPage extends BaseModel
 {
+    public const NAV_GROUPS = [
+        'practice-type' => 'Practice Type',
+        'solution' => 'Solutions',
+    ];
+
     protected $fillable = [
         'title',
         'slug',
+        'nav_group',
         'content',
+        'page_data',
+        'summary',
+        'icon',
         'meta_title',
         'meta_description',
         'is_active',
@@ -19,7 +28,8 @@ class LandingPageCustomPage extends BaseModel
 
     protected $casts = [
         'is_active' => 'boolean',
-        'sort_order' => 'integer'
+        'sort_order' => 'integer',
+        'page_data' => 'array'
     ];
 
     public function scopeOrdered($query)
@@ -30,6 +40,11 @@ class LandingPageCustomPage extends BaseModel
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeInNavGroup($query, string $group)
+    {
+        return $query->where('nav_group', $group);
     }
 
     protected static function boot()

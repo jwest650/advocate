@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from '@inertiajs/react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/language-switcher';
 
@@ -8,6 +8,8 @@ interface CustomPage {
   id: number;
   title: string;
   slug: string;
+  nav_group?: string | null;
+  summary?: string | null;
 }
 
 interface HeaderProps {
@@ -55,10 +57,37 @@ export default function Header({ settings, sectionData, customPages = [], brandC
     };
   }, []);
 
-  const menuItems = customPages.map(page => ({
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [openMobileGroup, setOpenMobileGroup] = useState<string | null>(null);
+
+  // These pages stay reachable from the footer and by URL, but are kept out of the header nav.
+  const hiddenNavSlugs = [
+    'about-us',
+    'privacy-policy',
+    'terms-of-service',
+    'contact-us',
+    'refund-policy',
+    'faq',
+  ];
+
+  const toLink = (page: CustomPage) => ({
     name: page.title,
-    href: route('custom-page.show', page.slug)
-  }));
+    summary: page.summary ?? null,
+    href: route('custom-page.show', page.slug),
+  });
+
+  const practiceTypes = customPages.filter(p => p.nav_group === 'practice-type').map(toLink);
+  const solutions = customPages.filter(p => p.nav_group === 'solution').map(toLink);
+
+  // Anything not in a dropdown and not hidden still renders as a plain top-level link.
+  const menuItems = customPages
+    .filter(page => !page.nav_group && !hiddenNavSlugs.includes(page.slug))
+    .map(toLink);
+
+  const dropdowns = [
+    { key: 'solutions', label: t('Solutions'), items: solutions },
+    { key: 'practice-type', label: t('Practice Type'), items: practiceTypes },
+  ].filter(group => group.items.length > 0);
 
   const isTransparent = sectionData?.transparent;
   const backgroundColor = sectionData?.background_color || '#ffffff';
@@ -114,6 +143,59 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                 aria-hidden="true"
               ></span>
             </Link>
+            {dropdowns.map((group) => (
+              <div
+                key={group.key}
+                className="relative"
+                onMouseEnter={() => setOpenDropdown(group.key)}
+                onMouseLeave={() => setOpenDropdown(null)}
+              >
+                <button
+                  type="button"
+                  className="flex items-center gap-1 text-gray-600 text-sm font-medium transition-colors py-2"
+                  aria-expanded={openDropdown === group.key}
+                  aria-haspopup="true"
+                  onClick={() => setOpenDropdown(openDropdown === group.key ? null : group.key)}
+                  onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
+                  onMouseLeave={(e) => e.currentTarget.style.color = ''}
+                >
+                  {group.label}
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform ${openDropdown === group.key ? 'rotate-180' : ''}`}
+                    aria-hidden="true"
+                  />
+                </button>
+
+                {openDropdown === group.key && (
+                  <div
+                    className={`absolute top-full ${isRtl ? 'right-0' : 'left-0'} pt-2 z-50`}
+                  >
+                    <div className="w-72 max-h-[70vh] overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl py-2">
+                      {group.items.map((item) => (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          className="block px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                          onClick={() => setOpenDropdown(null)}
+                        >
+                          <span
+                            className="block text-sm font-medium text-gray-900"
+                            onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
+                            onMouseLeave={(e) => e.currentTarget.style.color = ''}
+                          >
+                            {item.name}
+                          </span>
+                          {item.summary && (
+                            <span className="block text-xs text-gray-500 mt-0.5">{item.summary}</span>
+                          )}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
             {menuItems.map((item) => (
               <Link
                 key={item.name}
@@ -192,6 +274,40 @@ export default function Header({ settings, sectionData, customPages = [], brandC
               >
                 {t('Home')}
               </Link>
+              {dropdowns.map((group) => (
+                <div key={group.key}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between text-gray-600 hover:text-gray-900 text-base font-medium transition-colors"
+                    aria-expanded={openMobileGroup === group.key}
+                    onClick={() => setOpenMobileGroup(openMobileGroup === group.key ? null : group.key)}
+                  >
+                    {group.label}
+                    <ChevronDown
+                      size={18}
+                      className={`transition-transform ${openMobileGroup === group.key ? 'rotate-180' : ''}`}
+                      aria-hidden="true"
+                    />
+                  </button>
+                  {openMobileGroup === group.key && (
+                    <div className={`mt-3 space-y-3 border-gray-200 ${isRtl ? 'pr-4 border-r' : 'pl-4 border-l'}`}>
+                      {group.items.map((item) => (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          className="block text-gray-600 hover:text-gray-900 text-sm transition-colors"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setOpenMobileGroup(null);
+                          }}
+                        >
+                          {item.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
               {menuItems.map((item) => (
                 <Link
                   key={item.name}

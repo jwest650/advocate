@@ -25,6 +25,8 @@ class DatabaseSeeder extends Seeder
                 EmailTemplateSeeder::class,
                 NotificationTemplateSeeder::class,
                 LandingPageCustomPageSeeder::class,
+                PracticeTypePageSeeder::class,
+                SolutionPageSeeder::class,
                 PaymentSettingSeeder::class,
                 LoginHistorySeeder::class,
                 FaqSeeder::class,
@@ -132,6 +134,8 @@ class DatabaseSeeder extends Seeder
                 EmailTemplateSeeder::class,
                 NotificationTemplateSeeder::class,
                 LandingPageCustomPageSeeder::class,
+                PracticeTypePageSeeder::class,
+                SolutionPageSeeder::class,
                 TeamMemberRoleSeeder::class,
             ]);
         }

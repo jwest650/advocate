@@ -46,7 +46,10 @@ class CustomPageController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
+            'nav_group' => 'nullable|string|in:practice-type,solution',
             'content' => 'required|string',
+            'summary' => 'nullable|string|max:255',
+            'icon' => 'nullable|string|max:64',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'is_active' => 'boolean',
@@ -62,7 +65,10 @@ class CustomPageController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
+            'nav_group' => 'nullable|string|in:practice-type,solution',
             'content' => 'required|string',
+            'summary' => 'nullable|string|max:255',
+            'icon' => 'nullable|string|max:64',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'is_active' => 'boolean',
@@ -84,10 +90,14 @@ class CustomPageController extends Controller
     {
         $page = LandingPageCustomPage::where('slug', $slug)->where('is_active', true)->firstOrFail();
         $landingSettings = \App\Models\LandingPageSetting::getSettings();
-        
 
-        
-        return Inertia::render('landing-page/custom-page', [
+        // Pages with structured blocks get the full marketing layout;
+        // everything else falls back to the plain prose template.
+        $template = !empty($page->page_data)
+            ? 'landing-page/marketing-page'
+            : 'landing-page/custom-page';
+
+        return Inertia::render($template, [
             'page' => $page,
             'customPages' => LandingPageCustomPage::active()->ordered()->get(),
             'settings' => $landingSettings
