@@ -128,7 +128,7 @@ export default function Header({ settings, sectionData, customPages = [], brandC
           </div>
 
           {/* Desktop Navigation */}
-          <nav className={`hidden md:flex items-center space-x-8 ${isRtl ? 'space-x-reverse order-2' : 'order-2'}`} role="navigation" aria-label="Main navigation">
+          <nav className={`hidden md:flex items-center space-x-12 ${isRtl ? 'space-x-reverse order-2' : 'order-2'}`} role="navigation" aria-label="Main navigation">
             <Link
               href={route('home')}
               className="text-gray-600 text-sm font-medium transition-colors relative group"
