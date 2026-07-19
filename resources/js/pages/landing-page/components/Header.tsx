@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { LanguageSwitcher } from '@/components/language-switcher';
 
 interface CustomPage {
   id: number;
@@ -17,12 +16,19 @@ interface HeaderProps {
   settings: {
     company_name: string;
   };
-  sectionData?: any;
+  sectionData?: {
+    transparent?: boolean;
+    background_color?: string;
+  };
   customPages?: CustomPage[];
 }
 
 export default function Header({ settings, sectionData, customPages = [], brandColor = '#3b82f6' }: HeaderProps) {
   const { t } = useTranslation();
+  const { props: pageProps } = usePage<{ customPages?: CustomPage[] }>();
+  const resolvedCustomPages = Array.isArray(customPages) && customPages.length > 0
+    ? customPages
+    : Array.isArray(pageProps?.customPages) ? pageProps.customPages : [];
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isRtl, setIsRtl] = useState(() => {
@@ -55,20 +61,10 @@ export default function Header({ settings, sectionData, customPages = [], brandC
       window.removeEventListener('scroll', handleScroll);
       observer.disconnect();
     };
-  }, []);
+  }, [isRtl]);
 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [openMobileGroup, setOpenMobileGroup] = useState<string | null>(null);
-
-  // These pages stay reachable from the footer and by URL, but are kept out of the header nav.
-  const hiddenNavSlugs = [
-    'about-us',
-    'privacy-policy',
-    'terms-of-service',
-    'contact-us',
-    'refund-policy',
-    'faq',
-  ];
 
   const toLink = (page: CustomPage) => ({
     name: page.title,
@@ -76,13 +72,12 @@ export default function Header({ settings, sectionData, customPages = [], brandC
     href: route('custom-page.show', page.slug),
   });
 
-  const practiceTypes = customPages.filter(p => p.nav_group === 'practice-type').map(toLink);
-  const solutions = customPages.filter(p => p.nav_group === 'solution').map(toLink);
+  const practiceTypes = resolvedCustomPages.filter((p: CustomPage) => p.nav_group === 'practice-type').map(toLink);
+  const solutions = resolvedCustomPages.filter((p: CustomPage) => p.nav_group === 'solution').map(toLink);
 
-  // Anything not in a dropdown and not hidden still renders as a plain top-level link.
-  const menuItems = customPages
-    .filter(page => !page.nav_group && !hiddenNavSlugs.includes(page.slug))
-    .map(toLink);
+  // Only the grouped landing-page sections should appear in the main header.
+  // Standalone custom pages remain available via the footer or direct URL.
+  const menuItems: Array<{ name: string; summary: string | null; href: string }> = [];
 
   const dropdowns = [
     { key: 'solutions', label: t('Solutions'), items: solutions },
@@ -95,11 +90,11 @@ export default function Header({ settings, sectionData, customPages = [], brandC
   const getHeaderClasses = () => {
     if (isTransparent) {
       return isScrolled
-        ? 'bg-white/95 backdrop-blur-xl shadow-lg border-b border-gray-200/50'
+        ? 'border-b border-slate-200/80 bg-white/90 shadow-[0_12px_40px_-24px_rgba(15,23,42,0.35)] backdrop-blur-xl'
         : 'bg-transparent';
     }
     return isScrolled
-      ? 'shadow-lg border-b border-gray-200/50'
+      ? 'border-b border-slate-200/80 shadow-[0_12px_40px_-24px_rgba(15,23,42,0.35)]'
       : '';
   };
 
@@ -113,13 +108,13 @@ export default function Header({ settings, sectionData, customPages = [], brandC
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${getHeaderClasses()}`}
       style={getHeaderStyle()}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className={`flex items-center h-16 ${isRtl ? 'flex-row-reverse justify-between' : 'justify-between'}`}>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className={`flex h-16 items-center ${isRtl ? 'flex-row-reverse justify-between' : 'justify-between'}`}>
           {/* Logo */}
           <div className={`flex-shrink-0 ${isRtl ? 'order-3' : 'order-1'}`}>
             <Link
               href={route("home")}
-              className="text-2xl font-bold text-gray-900 transition-colors"
+              className="text-xl font-semibold tracking-tight text-slate-900 transition-colors sm:text-2xl"
               onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
               onMouseLeave={(e) => e.currentTarget.style.color = ''}
             >
@@ -128,10 +123,10 @@ export default function Header({ settings, sectionData, customPages = [], brandC
           </div>
 
           {/* Desktop Navigation */}
-          <nav className={`hidden md:flex items-center space-x-12 ${isRtl ? 'space-x-reverse order-2' : 'order-2'}`} role="navigation" aria-label="Main navigation">
+          <nav className={`hidden md:flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 px-3 py-2 shadow-sm backdrop-blur ${isRtl ? 'space-x-reverse order-2' : 'order-2'}`} role="navigation" aria-label="Main navigation">
             <Link
               href={route('home')}
-              className="text-gray-600 text-sm font-medium transition-colors relative group"
+              className="relative rounded-full px-3 py-2 text-sm font-medium text-slate-700 transition-all duration-200 hover:bg-slate-50 hover:text-slate-950"
               style={{ '--hover-color': brandColor } as React.CSSProperties}
               onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
               onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -152,7 +147,7 @@ export default function Header({ settings, sectionData, customPages = [], brandC
               >
                 <button
                   type="button"
-                  className="flex items-center gap-1 text-gray-600 text-sm font-medium transition-colors py-2"
+                  className="flex items-center gap-1 rounded-full px-3 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-50 hover:text-slate-950"
                   aria-expanded={openDropdown === group.key}
                   aria-haspopup="true"
                   onClick={() => setOpenDropdown(openDropdown === group.key ? null : group.key)}
@@ -169,28 +164,37 @@ export default function Header({ settings, sectionData, customPages = [], brandC
 
                 {openDropdown === group.key && (
                   <div
-                    className={`absolute top-full ${isRtl ? 'right-0' : 'left-0'} pt-2 z-50`}
+                    className={`absolute top-full ${isRtl ? 'right-0' : 'left-0'} pt-3 z-50`}
                   >
-                    <div className="w-72 max-h-[70vh] overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl py-2">
-                      {group.items.map((item) => (
-                        <Link
-                          key={item.name}
-                          href={item.href}
-                          className="block px-4 py-2.5 hover:bg-gray-50 transition-colors"
-                          onClick={() => setOpenDropdown(null)}
-                        >
-                          <span
-                            className="block text-sm font-medium text-gray-900"
-                            onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
-                            onMouseLeave={(e) => e.currentTarget.style.color = ''}
+                    <div className="w-84 max-h-[72vh] overflow-y-auto rounded-[24px] border border-slate-200/80 bg-white/95 p-2 shadow-[0_32px_80px_-24px_rgba(15,23,42,0.4)] backdrop-blur-xl ring-1 ring-slate-200/70">
+                      <div className="rounded-[20px] border border-slate-100 bg-gradient-to-br from-white via-slate-50 to-white p-2">
+                        {group.items.map((item) => (
+                          <Link
+                            key={item.name}
+                            href={item.href}
+                            className="group flex items-start gap-3 rounded-[16px] border border-transparent px-3 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-200 hover:bg-slate-50 hover:shadow-sm"
+                            onClick={() => setOpenDropdown(null)}
                           >
-                            {item.name}
-                          </span>
-                          {item.summary && (
-                            <span className="block text-xs text-gray-500 mt-0.5">{item.summary}</span>
-                          )}
-                        </Link>
-                      ))}
+                            <span
+                              className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full transition-all duration-200 group-hover:scale-125"
+                              style={{ backgroundColor: brandColor }}
+                              aria-hidden="true"
+                            />
+                            <span className="min-w-0">
+                              <span
+                                className="block text-sm font-semibold text-slate-800 transition-colors"
+                                onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
+                                onMouseLeave={(e) => e.currentTarget.style.color = ''}
+                              >
+                                {item.name}
+                              </span>
+                              {item.summary && (
+                                <span className="mt-1 block text-xs leading-5 text-slate-500">{item.summary}</span>
+                              )}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -219,7 +223,7 @@ export default function Header({ settings, sectionData, customPages = [], brandC
           <div className={`hidden md:flex items-center gap-4 ${isRtl ? 'order-1' : 'order-3'}`}>
             <Link
               href={route('login')}
-              className="text-gray-600 text-sm font-medium transition-colors"
+              className="rounded-full px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950"
               onMouseEnter={(e) => e.currentTarget.style.color = brandColor}
               onMouseLeave={(e) => e.currentTarget.style.color = ''}
             >
@@ -227,7 +231,7 @@ export default function Header({ settings, sectionData, customPages = [], brandC
             </Link>
             <Link
               href={route('register')}
-              className="px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors border"
+              className="rounded-full border px-6 py-2.5 text-sm font-semibold transition-all duration-200"
               style={{
                 backgroundColor: brandColor,
                 color: 'white',
@@ -278,7 +282,7 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                 <div key={group.key}>
                   <button
                     type="button"
-                    className="flex w-full items-center justify-between text-gray-600 hover:text-gray-900 text-base font-medium transition-colors"
+                    className="flex w-full items-center justify-between rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2.5 text-base font-semibold text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50"
                     aria-expanded={openMobileGroup === group.key}
                     onClick={() => setOpenMobileGroup(openMobileGroup === group.key ? null : group.key)}
                   >
@@ -290,18 +294,23 @@ export default function Header({ settings, sectionData, customPages = [], brandC
                     />
                   </button>
                   {openMobileGroup === group.key && (
-                    <div className={`mt-3 space-y-3 border-gray-200 ${isRtl ? 'pr-4 border-r' : 'pl-4 border-l'}`}>
+                    <div className={`mt-3 space-y-2 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-2 ${isRtl ? 'pr-3' : 'pl-3'}`}>
                       {group.items.map((item) => (
                         <Link
                           key={item.name}
                           href={item.href}
-                          className="block text-gray-600 hover:text-gray-900 text-sm transition-colors"
+                          className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-white hover:text-slate-900"
                           onClick={() => {
                             setIsMenuOpen(false);
                             setOpenMobileGroup(null);
                           }}
                         >
-                          {item.name}
+                          <span
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: brandColor }}
+                            aria-hidden="true"
+                          />
+                          <span>{item.name}</span>
                         </Link>
                       ))}
                     </div>

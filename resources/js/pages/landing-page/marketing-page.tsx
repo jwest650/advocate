@@ -1,7 +1,7 @@
 import React from 'react';
 import { usePage, Head, Link } from '@inertiajs/react';
 import * as LucideIcons from 'lucide-react';
-import { CheckCircle2, ArrowRight, Quote, Plus, Minus } from 'lucide-react';
+import { CheckCircle2, ArrowRight, Quote, Plus, Minus, Shield } from 'lucide-react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import { useFavicon } from '@/hooks/use-favicon';
@@ -71,13 +71,28 @@ interface MarketingPage {
 interface PageProps {
   page: MarketingPage;
   customPages: Array<{ id: number; title: string; slug: string; nav_group?: string | null; summary?: string | null }>;
-  settings: Record<string, any>;
+  settings: {
+    config_sections?: {
+      theme?: {
+        primary_color?: string;
+        secondary_color?: string;
+        accent_color?: string;
+      };
+      sections?: Array<{ key: string; [key: string]: unknown }>;
+      custom_css?: string;
+      custom_js?: string;
+      section_visibility?: Record<string, boolean>;
+      section_order?: string[];
+    };
+    [key: string]: unknown;
+  };
 }
 
 /** Resolves an icon name from the seeded data to a Lucide component. */
 function Icon({ name, ...props }: { name?: string; size?: number; className?: string }) {
   const fallback = LucideIcons.Circle;
-  const Component = (name && (LucideIcons as any)[name]) || fallback;
+  const iconMap = LucideIcons as Record<string, React.ElementType>;
+  const Component = (name ? iconMap[name] : undefined) || fallback;
   return <Component {...props} />;
 }
 
@@ -92,7 +107,7 @@ function Section({ children, className = '' }: { children: React.ReactNode; clas
   const { ref, isVisible } = useScrollAnimation();
   return (
     <section
-      ref={ref as any}
+      ref={ref}
       className={`transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'} ${className}`}
     >
       {children}
@@ -101,9 +116,9 @@ function Section({ children, className = '' }: { children: React.ReactNode; clas
 }
 
 export default function MarketingPage() {
-  const pageProps = usePage<PageProps>();
+  const pageProps = usePage<PageProps & { globalSettings?: { is_demo?: boolean; layoutDirection?: 'left' | 'right' } }>();
   const { page, customPages = [], settings } = pageProps.props;
-  const globalSettings = (pageProps.props as any).globalSettings;
+  const globalSettings = pageProps.props.globalSettings;
 
   const data: PageData = page.page_data || {};
   const hero = data.hero || {};
@@ -173,7 +188,7 @@ export default function MarketingPage() {
       </Head>
 
       <div
-        className="min-h-screen bg-white"
+        className="min-h-screen bg-[linear-gradient(135deg,#f8fbff_0%,#f7f5ff_45%,#fdf8f2_100%)] text-slate-900"
         style={{
           '--primary-color': primaryColor,
           '--secondary-color': secondaryColor,
@@ -181,14 +196,13 @@ export default function MarketingPage() {
         } as React.CSSProperties}
       >
         <Header
-          settings={settings as any}
+          settings={settings as Record<string, unknown> & { company_name: string }}
           customPages={customPages}
-          sectionData={settings?.config_sections?.sections?.find((s: any) => s.key === 'header') || {}}
-          brandColor={primaryColor}
+          sectionData={settings?.config_sections?.sections?.find((s: { key: string; [key: string]: unknown }) => s.key === 'header') || {}}
         />
 
         <main className="pt-16">
-          {/* Hero — layout varies by heroMode ('split' | 'reverse' | 'centered') */}
+          {/* Hero — phase 1 of the refreshed dropdown-page experience */}
           <section className="relative overflow-hidden">
             <div
               className="absolute inset-0 -z-10"
@@ -197,28 +211,31 @@ export default function MarketingPage() {
             />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
               {(() => {
+                const heroImage = imageUrl(hero.image || '/screenshots/a-advocate-saas-pic.png');
+                const heroBadges = ['Secure client workflows', 'Built for modern legal teams', 'Trusted by growing firms'];
                 const eyebrowEl = data.eyebrow && (
                   <span
-                    className="inline-block px-3 py-1 mb-5 rounded-full text-xs font-semibold tracking-wide uppercase"
-                    style={{ backgroundColor: `${leadColor}1A`, color: leadColor }}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] shadow-sm"
+                    style={{ color: leadColor }}
                   >
+                    <Shield size={14} aria-hidden="true" />
                     {data.eyebrow}
                   </span>
                 );
                 const headlineEl = (
-                  <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight mb-6">
+                  <h1 className="text-4xl lg:text-5xl font-semibold tracking-tight text-slate-950 leading-tight mb-6">
                     {hero.headline || page.title}
                   </h1>
                 );
                 const subheadEl = hero.subheadline && (
-                  <p className="text-lg text-gray-600 leading-relaxed mb-8">{hero.subheadline}</p>
+                  <p className="text-lg text-slate-600 leading-8 mb-8 max-w-2xl">{hero.subheadline}</p>
                 );
                 const bulletsEl = !!hero.bullets?.length && (
                   <ul className={`space-y-3 mb-8 ${heroMode === 'centered' ? 'inline-flex flex-col text-left' : ''}`}>
                     {hero.bullets.map((bullet) => (
-                      <li key={bullet} className="flex items-start gap-3">
-                        <CheckCircle2 size={20} className="mt-0.5 shrink-0" style={{ color: accentColor }} aria-hidden="true" />
-                        <span className="text-gray-700">{bullet}</span>
+                      <li key={bullet} className="flex items-start gap-3 rounded-xl border border-slate-200/70 bg-white/70 px-3 py-2.5 shadow-sm">
+                        <CheckCircle2 size={18} className="mt-0.5 shrink-0" style={{ color: accentColor }} aria-hidden="true" />
+                        <span className="text-slate-700">{bullet}</span>
                       </li>
                     ))}
                   </ul>
@@ -227,7 +244,7 @@ export default function MarketingPage() {
                   <div className={`flex flex-wrap gap-4 ${heroMode === 'centered' ? 'justify-center' : ''}`}>
                     <Link
                       href={hero.primary_cta?.href || registerHref}
-                      className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg text-sm font-semibold text-white shadow-lg transition-transform hover:-translate-y-0.5"
+                      className="inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold text-white shadow-lg transition-transform duration-200 hover:-translate-y-0.5"
                       style={{ backgroundColor: leadColor }}
                     >
                       {hero.primary_cta?.label || 'Start Free Trial'}
@@ -235,58 +252,85 @@ export default function MarketingPage() {
                     </Link>
                     <Link
                       href={hero.secondary_cta?.href || contactHref}
-                      className="inline-flex items-center px-7 py-3.5 rounded-lg text-sm font-semibold border-2 bg-white transition-colors"
-                      style={{ borderColor: leadColor, color: leadColor }}
+                      className="inline-flex items-center rounded-full border border-slate-300 bg-white/80 px-7 py-3.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-white"
                     >
                       {hero.secondary_cta?.label || 'Book a Demo'}
                     </Link>
                   </div>
                 );
-                const imageEl = hero.image && (
+                const imageEl = heroImage && (
                   <div className="relative">
                     <div
-                      className="absolute -inset-4 rounded-3xl blur-2xl opacity-20"
+                      className="absolute -inset-4 rounded-[32px] blur-3xl opacity-20"
                       style={{ background: `linear-gradient(135deg, ${leadColor}, ${secondaryColor})` }}
                       aria-hidden="true"
                     />
-                    <img
-                      src={imageUrl(hero.image)}
-                      alt={`${page.title} in AdvocateGo`}
-                      loading="eager"
-                      className="relative w-full rounded-2xl border border-gray-200 shadow-2xl"
-                    />
+                    <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950/90 p-2 shadow-[0_35px_90px_-30px_rgba(15,23,42,0.45)]">
+                      <img
+                        src={heroImage}
+                        alt={`${page.title} in AdvocateGo`}
+                        loading="eager"
+                        className="w-full rounded-[22px] border border-white/10 object-cover shadow-2xl"
+                        style={{ aspectRatio: '16 / 10' }}
+                      />
+                    </div>
+                    <div className="absolute -bottom-4 left-4 right-4 rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-lg backdrop-blur">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${leadColor}14`, color: leadColor }}>
+                          <Shield size={18} aria-hidden="true" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">Legal-grade operations</p>
+                          <p className="text-sm text-slate-600">Secure workflows, clear oversight, and faster execution.</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 );
 
-                // Centered: copy stacked and centered, image full-width beneath.
                 if (heroMode === 'centered') {
                   return (
-                    <div className="text-center">
-                      <div className="max-w-3xl mx-auto">
-                        {eyebrowEl}
-                        {headlineEl}
-                        {subheadEl}
-                        {bulletsEl && <div className="flex justify-center">{bulletsEl}</div>}
-                        {ctaEl}
+                    <div className="rounded-[32px] border border-slate-200/80 bg-white/70 p-8 shadow-[0_30px_80px_-24px_rgba(15,23,42,0.2)] backdrop-blur-xl lg:p-10">
+                      <div className="text-center">
+                        <div className="max-w-3xl mx-auto">
+                          {eyebrowEl}
+                          {headlineEl}
+                          {subheadEl}
+                          {bulletsEl && <div className="flex justify-center">{bulletsEl}</div>}
+                          {ctaEl}
+                          <div className="mt-6 flex flex-wrap justify-center gap-2">
+                            {heroBadges.map((badge) => (
+                              <span key={badge} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-600">
+                                {badge}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        {imageEl && <div className="mt-10 max-w-5xl mx-auto">{imageEl}</div>}
                       </div>
-                      {imageEl && <div className="mt-14 max-w-5xl mx-auto">{imageEl}</div>}
                     </div>
                   );
                 }
 
-                // Split / reverse: two columns, image on right or left.
                 const copyCol = (
-                  <div key="copy">
+                  <div key="copy" className="rounded-[32px] border border-slate-200/80 bg-white/70 p-8 shadow-[0_30px_80px_-24px_rgba(15,23,42,0.2)] backdrop-blur-xl lg:p-10">
                     {eyebrowEl}
                     {headlineEl}
                     {subheadEl}
                     {bulletsEl}
                     {ctaEl}
+                    <div className="mt-6 flex flex-wrap gap-2">
+                      {heroBadges.map((badge) => (
+                        <span key={badge} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-600">
+                          {badge}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 );
-                const imageCol = imageEl ? <div key="image">{imageEl}</div> : null;
+                const imageCol = imageEl ? <div key="image" className="relative">{imageEl}</div> : null;
                 return (
-                  <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                  <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
                     {heroMode === 'reverse' ? [imageCol, copyCol] : [copyCol, imageCol]}
                   </div>
                 );
@@ -296,17 +340,17 @@ export default function MarketingPage() {
 
           {/* Stats */}
           {!!stats.length && (
-            <Section className="border-y border-gray-100 bg-gray-50">
+            <Section className="border-y border-slate-200/70 bg-white/60 backdrop-blur">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <dl className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                   {stats.map((stat) => (
-                    <div key={stat.label}>
+                    <div key={stat.label} className="rounded-2xl border border-slate-200/70 bg-white/90 p-6 shadow-sm">
                       <dt className="sr-only">{stat.label}</dt>
                       <dd>
-                        <span className="block text-3xl lg:text-4xl font-bold" style={{ color: leadColor }}>
+                        <span className="block text-3xl lg:text-4xl font-semibold tracking-tight" style={{ color: leadColor }}>
                           {stat.value}
                         </span>
-                        <span className="block mt-2 text-sm text-gray-600">{stat.label}</span>
+                        <span className="mt-2 block text-sm text-slate-600">{stat.label}</span>
                       </dd>
                     </div>
                   ))}
@@ -380,7 +424,7 @@ export default function MarketingPage() {
                     {features.items.map((item) => (
                       <div
                         key={item.title}
-                        className="group p-7 rounded-2xl border border-gray-200 bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                        className="group rounded-[24px] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50 to-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
                       >
                         <div
                           className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
@@ -415,7 +459,7 @@ export default function MarketingPage() {
                     {showcase.items.map((item) => (
                       <div
                         key={item.title}
-                        className="flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+                        className="flex flex-col overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
                       >
                         <img
                           src={imageUrl(item.image)}
@@ -435,16 +479,21 @@ export default function MarketingPage() {
                     {showcase.items.map((item, index) => (
                       <div key={item.title} className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
                         <div className={index % 2 === 1 ? 'lg:order-2' : ''}>
-                          <img
-                            src={imageUrl(item.image)}
-                            alt={item.title}
-                            loading="lazy"
-                            className="w-full rounded-2xl border border-gray-200 shadow-xl"
-                          />
+                          <div className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-white p-2 shadow-[0_20px_60px_-24px_rgba(15,23,42,0.35)]">
+                            <img
+                              src={imageUrl(item.image)}
+                              alt={item.title}
+                              loading="lazy"
+                              className="w-full rounded-[18px] border border-slate-100 object-cover"
+                              style={{ aspectRatio: '16 / 10' }}
+                            />
+                          </div>
                         </div>
                         <div className={index % 2 === 1 ? 'lg:order-1' : ''}>
-                          <h3 className="text-2xl font-bold text-gray-900 mb-4">{item.title}</h3>
-                          <p className="text-gray-600 leading-relaxed">{item.description}</p>
+                          <div className="rounded-[24px] border border-slate-200/80 bg-white/80 p-8 shadow-sm backdrop-blur">
+                            <h3 className="text-2xl font-semibold text-slate-900 mb-4">{item.title}</h3>
+                            <p className="text-slate-600 leading-relaxed">{item.description}</p>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -568,8 +617,8 @@ export default function MarketingPage() {
         </main>
 
         <Footer
-          settings={settings as any}
-          sectionData={settings?.config_sections?.sections?.find((s: any) => s.key === 'footer') || {}}
+          settings={settings as Record<string, unknown> & { company_name: string }}
+          sectionData={settings?.config_sections?.sections?.find((s: { key: string; [key: string]: unknown }) => s.key === 'footer') || {}}
           brandColor={primaryColor}
         />
       </div>
