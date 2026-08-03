@@ -13,6 +13,12 @@ use Illuminate\Support\Facades\Validator;
 class EmailSettingController extends Controller
 {
     /**
+     * Placeholder returned to the client in place of the real SMTP password.
+     * Submitting this value back means "leave the stored password unchanged".
+     */
+    private const PASSWORD_MASK = '••••••••••••';
+
+    /**
      * Get email settings for the authenticated user.
      *
      * @return \Illuminate\Http\JsonResponse
@@ -33,7 +39,7 @@ class EmailSettingController extends Controller
 
         // Mask password if it exists
         if (!empty($settings['password'])) {
-            $settings['password'] = '••••••••••••';
+            $settings['password'] = self::PASSWORD_MASK;
         }
 
         return response()->json($settings);
@@ -47,13 +53,21 @@ class EmailSettingController extends Controller
     public function updateEmailSettings(Request $request)
     {
         $user = Auth::user();
+
+        // A password is only optional when one is already stored — otherwise the
+        // form would save "successfully" with no credentials and every send would
+        // fail later with an opaque SMTP auth error.
+        $hasStoredPassword = !empty(getSetting('email_password', ''));
+
         $validated = $request->validate([
             'provider' => 'required|string',
             'driver' => 'required|string',
             'host' => 'required|string',
             'port' => 'required|string',
             'username' => 'required|string',
-            'password' => 'nullable|string',
+            'password' => $hasStoredPassword
+                ? 'nullable|string'
+                : ['required', 'string', 'not_in:' . self::PASSWORD_MASK],
             'encryption' => 'required|string',
             'fromAddress' => 'required|email',
             'fromName' => 'required|string',
@@ -66,7 +80,7 @@ class EmailSettingController extends Controller
         updateSetting('email_username', $validated['username']);
         
         // Only update password if provided and not masked
-        if (!empty($validated['password']) && $validated['password'] !== '••••••••••••') {
+        if (!empty($validated['password']) && $validated['password'] !== self::PASSWORD_MASK) {
             updateSetting('email_password', $validated['password']);
         }
         
