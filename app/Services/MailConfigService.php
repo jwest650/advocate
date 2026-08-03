@@ -18,6 +18,11 @@ class MailConfigService
      */
     public static function setDynamicConfig()
     {
+        // Pinned to .env — the Email Settings form must not redirect delivery.
+        if (config('mail.use_env_only')) {
+            return;
+        }
+
         $user = Auth::user();
         if (!$user) {
             return;

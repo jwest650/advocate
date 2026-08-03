@@ -95,6 +95,13 @@ class DiagnoseVerificationEmail extends Command
     {
         $host = Setting::where('user_id', $superAdmin->id)->where('key', 'email_host')->value('value');
 
+        if (config('mail.use_env_only')) {
+            $stored = empty($host) ? 'nothing stored' : "stored host {$host} is ignored";
+            $this->pass('tenant SMTP override', "disabled by MAIL_USE_ENV_ONLY — {$stored}");
+
+            return;
+        }
+
         if (empty($host)) {
             $this->pass('tenant SMTP override', 'none stored — using .env defaults');
 

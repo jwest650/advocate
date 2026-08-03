@@ -122,19 +122,23 @@ class EmailSettingController extends Controller
         
         // Get the actual password (not masked)
         $password = getSetting('email_password', '');
-        
+
         try {
-            // Configure mail settings for this request only
-            config([
-                'mail.default' => $settings['driver'],
-                'mail.mailers.smtp.host' => $settings['host'],
-                'mail.mailers.smtp.port' => $settings['port'],
-                'mail.mailers.smtp.encryption' => $settings['encryption'] === 'none' ? null : $settings['encryption'],
-                'mail.mailers.smtp.username' => $settings['username'],
-                'mail.mailers.smtp.password' => $password,
-                'mail.from.address' => $settings['fromAddress'],
-                'mail.from.name' => $settings['fromName'],
-            ]);
+            // When delivery is pinned to .env, testing the stored settings would
+            // report on credentials that no real message will ever use.
+            if (!config('mail.use_env_only')) {
+                // Configure mail settings for this request only
+                config([
+                    'mail.default' => $settings['driver'],
+                    'mail.mailers.smtp.host' => $settings['host'],
+                    'mail.mailers.smtp.port' => $settings['port'],
+                    'mail.mailers.smtp.encryption' => $settings['encryption'] === 'none' ? null : $settings['encryption'],
+                    'mail.mailers.smtp.username' => $settings['username'],
+                    'mail.mailers.smtp.password' => $password,
+                    'mail.from.address' => $settings['fromAddress'],
+                    'mail.from.name' => $settings['fromName'],
+                ]);
+            }
 
             // Send test email
             Mail::to($request->email)->send(new TestMail());

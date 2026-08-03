@@ -11,6 +11,9 @@ use App\Services\MailConfigService;
  */
 beforeEach(function () {
     config([
+        // Pinned per-test rather than inherited from .env, which the developer
+        // running the suite may have set either way.
+        'mail.use_env_only' => false,
         'mail.default' => 'smtp',
         'mail.mailers.smtp.host' => 'mail.env-default.test',
         'mail.mailers.smtp.port' => '465',
@@ -66,6 +69,31 @@ test('stored tenant smtp settings override the application defaults', function (
         ->and(config('mail.mailers.smtp.password'))->toBe('tenant-secret')
         ->and(config('mail.from.address'))->toBe('no-reply@tenant.test')
         ->and(config('mail.from.name'))->toBe('Tenant Legal');
+});
+
+test('stored settings are ignored entirely when MAIL_USE_ENV_ONLY is on', function () {
+    config(['mail.use_env_only' => true]);
+
+    $superAdmin = User::factory()->create(['type' => 'superadmin']);
+
+    collect([
+        'email_host' => 'smtp.tenant.test',
+        'email_username' => 'tenant@tenant.test',
+        'email_password' => 'tenant-secret',
+        'email_from_address' => 'no-reply@tenant.test',
+    ])->each(fn ($value, $key) => Setting::updateOrCreate(
+        ['user_id' => $superAdmin->id, 'key' => $key],
+        ['value' => $value],
+    ));
+
+    $this->actingAs(companyUnder($superAdmin));
+
+    MailConfigService::setDynamicConfig();
+
+    expect(config('mail.mailers.smtp.host'))->toBe('mail.env-default.test')
+        ->and(config('mail.mailers.smtp.username'))->toBe('env@env-default.test')
+        ->and(config('mail.mailers.smtp.password'))->toBe('env-secret')
+        ->and(config('mail.from.address'))->toBe('env@env-default.test');
 });
 
 test('an encryption setting of none clears the encryption config', function () {
