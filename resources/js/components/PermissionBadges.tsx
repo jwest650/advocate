@@ -16,21 +16,22 @@ interface PermissionBadgesProps {
 export function PermissionBadges({ permissions = [], maxDisplay = 3 }: PermissionBadgesProps) {
   const { t } = useTranslation();
   if (!permissions || !Array.isArray(permissions) || permissions.length === 0) {
-    return <span className="text-sm text-gray-500">-</span>;
+    return <span className="text-muted-foreground text-sm">-</span>;
   }
 
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap items-center gap-1.5">
       {permissions.slice(0, maxDisplay).map((permission, index) => (
-        <span 
-          key={index} 
-          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+        <span
+          key={index}
+          className="bg-primary/10 text-primary ring-primary/15 inline-flex max-w-[13rem] items-center truncate rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset"
+          title={permission.label || permission.name}
         >
           {permission.label || permission.name}
         </span>
       ))}
       {permissions.length > maxDisplay && (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+        <span className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums">
           +{permissions.length - maxDisplay} {t("more")}
         </span>
       )}

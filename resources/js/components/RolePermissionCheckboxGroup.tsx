@@ -2,10 +2,10 @@
 import { Checkbox } from '@/components/ui/checkbox';
 import { IndeterminateCheckbox } from '@/components/ui/indeterminate-checkbox';
 import { Label } from '@/components/ui/label';
-import { Ban } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Ban, Globe, Layers, Search, ShieldCheck, User, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card } from './ui/card';
 import { Input } from './ui/input';
 
 interface Permission {
@@ -319,137 +319,240 @@ export function RolePermissionCheckboxGroup({ permissions, selectedPermissions, 
         return selectedCount > 0 && selectedCount < modulePermissionIds.length;
     };
 
+    const totalCount = getAllPermissionIds().length;
+    const selectedPercent = totalCount > 0 ? Math.round((selected.length / totalCount) * 100) : 0;
+    const manageAnyIds = getManageAnyPermissionIds();
+    const manageOwnIds = getManageOwnPermissionIds();
+    const manageAnySelected = manageAnyIds.filter((id) => selected.includes(id)).length;
+    const manageOwnSelected = manageOwnIds.filter((id) => selected.includes(id)).length;
+
     return (
-        <div className="space-y-6">
-            {/* Select All Checkboxes */}
-            <div className="space-y-3">
-                {/* Select All Permissions */}
-                <div className="rounded border bg-gray-50 p-3 shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+        <div className="space-y-5">
+            {/* Scoped animations */}
+            <style>{`
+                @keyframes permFadeUp {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .perm-in { opacity: 0; animation: permFadeUp .4s cubic-bezier(.16,.84,.44,1) forwards; }
+                @media (prefers-reduced-motion: reduce) {
+                    .perm-in { animation: none; opacity: 1; }
+                }
+            `}</style>
+
+            {/* Master selector with progress */}
+            <div className="bg-card relative overflow-hidden rounded-2xl border p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <span className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                            <ShieldCheck className="h-[18px] w-[18px]" />
+                        </span>
+                        <div className="flex items-center gap-2.5">
                             <IndeterminateCheckbox
                                 id="select-all-permissions-checkbox"
                                 checked={isAllSelected}
                                 onCheckedChange={(checked) => handleSelectAll(checked === true)}
                             />
-                            <Label htmlFor="select-all-permissions-checkbox" className="font-medium">
+                            <Label htmlFor="select-all-permissions-checkbox" className="cursor-pointer font-semibold">
                                 {t('Select All Permissions')}
                             </Label>
                         </div>
-                        <div className="text-xs text-gray-500">
-                            {selected.length} {t('of')} {getAllPermissionIds().length} {t('selected')}
+                    </div>
+                    <div className="text-end">
+                        <div className="text-lg leading-none font-bold tabular-nums">
+                            {selected.length}
+                            <span className="text-muted-foreground text-sm font-normal"> / {totalCount}</span>
                         </div>
+                        <div className="text-muted-foreground mt-1 text-[11px] font-medium tracking-wide uppercase">{t('selected')}</div>
+                    </div>
+                </div>
+                <div className="bg-muted mt-3 h-1.5 w-full overflow-hidden rounded-full">
+                    <div
+                        className="bg-primary h-full rounded-full transition-[width] duration-700 ease-out"
+                        style={{ width: `${selectedPercent}%` }}
+                    />
+                </div>
+            </div>
+
+            {/* Scope shortcuts */}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="relative overflow-hidden rounded-2xl border border-blue-200 bg-blue-50/60 p-3.5 transition-colors duration-300 hover:bg-blue-50 dark:border-blue-500/25 dark:bg-blue-500/[0.08] dark:hover:bg-blue-500/[0.12]">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                            <IndeterminateCheckbox
+                                id="select-all-manage-any-checkbox"
+                                checked={isAllManageAnySelected()}
+                                onCheckedChange={(checked) => handleSelectAllManageAny(checked === true)}
+                            />
+                            <Globe className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                            <Label
+                                htmlFor="select-all-manage-any-checkbox"
+                                className="cursor-pointer truncate font-semibold text-blue-700 dark:text-blue-300"
+                            >
+                                {t('Select All (Manage-All)')}
+                            </Label>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-700 tabular-nums dark:bg-blue-500/20 dark:text-blue-300">
+                            {manageAnySelected} {t('of')} {manageAnyIds.length}
+                        </span>
                     </div>
                 </div>
 
-                {/* Select All Manage-Any and Manage-Own */}
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <div className="rounded border bg-blue-50 p-3 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <IndeterminateCheckbox
-                                    id="select-all-manage-any-checkbox"
-                                    checked={isAllManageAnySelected()}
-                                    onCheckedChange={(checked) => handleSelectAllManageAny(checked === true)}
-                                />
-                                <Label htmlFor="select-all-manage-any-checkbox" className="font-medium text-blue-700">
-                                    {t('Select All (Manage-All)')}
-                                </Label>
-                            </div>
-                            <div className="text-xs text-blue-600">
-                                {getManageAnyPermissionIds().filter((id) => selected.includes(id)).length} {t('of')}{' '}
-                                {getManageAnyPermissionIds().length}
-                            </div>
+                <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3.5 transition-colors duration-300 hover:bg-emerald-50 dark:border-emerald-500/25 dark:bg-emerald-500/[0.08] dark:hover:bg-emerald-500/[0.12]">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                            <IndeterminateCheckbox
+                                id="select-all-manage-own-checkbox"
+                                checked={isAllManageOwnSelected()}
+                                onCheckedChange={(checked) => handleSelectAllManageOwn(checked === true)}
+                            />
+                            <User className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                            <Label
+                                htmlFor="select-all-manage-own-checkbox"
+                                className="cursor-pointer truncate font-semibold text-emerald-700 dark:text-emerald-300"
+                            >
+                                {t('Select All (Manage-Own)')}
+                            </Label>
                         </div>
-                    </div>
-
-                    <div className="rounded border bg-green-50 p-3 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <IndeterminateCheckbox
-                                    id="select-all-manage-own-checkbox"
-                                    checked={isAllManageOwnSelected()}
-                                    onCheckedChange={(checked) => handleSelectAllManageOwn(checked === true)}
-                                />
-                                <Label htmlFor="select-all-manage-own-checkbox" className="font-medium text-green-700">
-                                    {t('Select All (Manage-Own)')}
-                                </Label>
-                            </div>
-                            <div className="text-xs text-green-600">
-                                {getManageOwnPermissionIds().filter((id) => selected.includes(id)).length} {t('of')}{' '}
-                                {getManageOwnPermissionIds().length}
-                            </div>
-                        </div>
+                        <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 tabular-nums dark:bg-emerald-500/20 dark:text-emerald-300">
+                            {manageOwnSelected} {t('of')} {manageOwnIds.length}
+                        </span>
                     </div>
                 </div>
             </div>
 
             {/* Search Box */}
-            <div className="mb-4 flex items-center gap-4">
-                <label className="whitespace-nowrap">Search:</label>
+            <div className="relative">
+                <Search className="text-muted-foreground pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2" />
                 <Input
                     type="text"
-                    placeholder="Search modules or permissions..."
+                    placeholder={t('Search modules or permissions...')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="flex-1"
+                    className="h-11 w-full rounded-xl ps-10 pe-10"
                 />
+                {searchTerm && (
+                    <button
+                        type="button"
+                        onClick={() => setSearchTerm('')}
+                        className="text-muted-foreground hover:bg-muted hover:text-foreground absolute end-2.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full transition-colors"
+                        aria-label={t('Clear')}
+                    >
+                        <X className="h-3.5 w-3.5" />
+                    </button>
+                )}
             </div>
 
             {/* Module Permissions */}
-            <div className="space-y-6">
+            <div className="space-y-4">
                 {Object.entries(filteredPermissions).length > 0 ? (
-                    Object.entries(filteredPermissions).map(([module, modulePermissions]) => (
-                        <div key={module} className="rounded border shadow-sm">
-                            {/* Module Header */}
-                            <div className="flex items-center justify-between border-b bg-gray-50 p-3">
-                                <div className="flex items-center space-x-2">
-                                    <IndeterminateCheckbox
-                                        id={`module-checkbox-${module.replace(/\s+/g, '-').toLowerCase()}`}
-                                        checked={isModuleSelected(module)}
-                                        indeterminate={isModuleIndeterminate(module)}
-                                        onCheckedChange={(checked) => handleModuleChange(module, checked === true)}
-                                    />
-                                    <Label htmlFor={`module-checkbox-${module.replace(/\s+/g, '-').toLowerCase()}`} className="font-medium">
-                                        {module.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                    </Label>
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                    {modulePermissions.filter((p) => selected.includes(p.id.toString())).length} of {modulePermissions.length}{' '}
-                                    {t('selected')}
-                                </div>
-                            </div>
+                    Object.entries(filteredPermissions).map(([module, modulePermissions], moduleIndex) => {
+                        const moduleId = `module-checkbox-${module.replace(/\s+/g, '-').toLowerCase()}`;
+                        const moduleSelectedCount = modulePermissions.filter((p) => selected.includes(p.id.toString())).length;
+                        const modulePercent = modulePermissions.length > 0 ? (moduleSelectedCount / modulePermissions.length) * 100 : 0;
+                        const allOn = isModuleSelected(module);
 
-                            {/* Individual Permissions */}
-                            <div className="p-3">
-                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                                    {modulePermissions.map((permission) => (
-                                        <div key={permission.id} className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id={`permission-checkbox-${permission.id.toString().replace(/\s+/g, '-').toLowerCase()}`}
-                                                checked={selected.includes(permission.id.toString()) || selected.includes(permission.name)}
-                                                onCheckedChange={(checked) => handlePermissionChange(permission.id.toString(), checked === true)}
+                        return (
+                            <div
+                                key={module}
+                                className={cn(
+                                    'perm-in bg-card overflow-hidden rounded-2xl border transition-shadow duration-300 hover:shadow-sm',
+                                    allOn && 'border-primary/30',
+                                )}
+                                style={{ animationDelay: `${Math.min(moduleIndex, 12) * 35}ms` }}
+                            >
+                                {/* Module Header */}
+                                <div className="bg-muted/40 flex items-center justify-between gap-3 border-b p-3">
+                                    <div className="flex min-w-0 items-center gap-2.5">
+                                        <IndeterminateCheckbox
+                                            id={moduleId}
+                                            checked={allOn}
+                                            indeterminate={isModuleIndeterminate(module)}
+                                            onCheckedChange={(checked) => handleModuleChange(module, checked === true)}
+                                        />
+                                        <span
+                                            className={cn(
+                                                'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-300',
+                                                allOn ? 'bg-primary/15 text-primary' : 'bg-background text-muted-foreground',
+                                            )}
+                                        >
+                                            <Layers className="h-3.5 w-3.5" />
+                                        </span>
+                                        <Label htmlFor={moduleId} className="cursor-pointer truncate font-semibold">
+                                            {module.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        </Label>
+                                    </div>
+
+                                    <div className="flex shrink-0 items-center gap-2.5">
+                                        <div className="bg-muted hidden h-1.5 w-16 overflow-hidden rounded-full sm:block">
+                                            <div
+                                                className="bg-primary h-full rounded-full transition-[width] duration-500 ease-out"
+                                                style={{ width: `${modulePercent}%` }}
                                             />
-                                            <Label
-                                                htmlFor={`permission-checkbox-${permission.id.toString().replace(/\s+/g, '-').toLowerCase()}`}
-                                                className="truncate text-sm"
-                                            >
-                                                {permission.label}
-                                            </Label>
                                         </div>
-                                    ))}
+                                        <span className="text-muted-foreground text-[11px] font-medium tabular-nums">
+                                            {moduleSelectedCount} / {modulePermissions.length}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Individual Permissions */}
+                                <div className="p-3">
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                                        {modulePermissions.map((permission) => {
+                                            const permissionId = `permission-checkbox-${permission.id.toString().replace(/\s+/g, '-').toLowerCase()}`;
+                                            const checked = selected.includes(permission.id.toString()) || selected.includes(permission.name);
+
+                                            return (
+                                                <div
+                                                    key={permission.id}
+                                                    className={cn(
+                                                        'flex items-center gap-2.5 rounded-xl border p-2.5 transition-all duration-200',
+                                                        checked
+                                                            ? 'border-primary/30 bg-primary/[0.06]'
+                                                            : 'border-transparent bg-muted/40 hover:bg-muted',
+                                                    )}
+                                                >
+                                                    <Checkbox
+                                                        id={permissionId}
+                                                        checked={checked}
+                                                        onCheckedChange={(checked) => handlePermissionChange(permission.id.toString(), checked === true)}
+                                                    />
+                                                    <Label
+                                                        htmlFor={permissionId}
+                                                        className={cn(
+                                                            'flex-1 cursor-pointer truncate text-[13px]',
+                                                            checked ? 'text-primary font-medium' : 'text-foreground/80',
+                                                        )}
+                                                        title={permission.label}
+                                                    >
+                                                        {permission.label}
+                                                    </Label>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 ) : (
-                    <Card className="p-8 text-center">
-                        <div className="flex flex-col items-center space-y-3">
-                            <Ban className="h-12 w-12 text-gray-400" />
-                            <p className="font-medium text-gray-500">{t('No permissions found')}</p>
-                            <p className="text-sm text-gray-400">Try adjusting your search criteria</p>
+                    <div className="bg-card flex flex-col items-center justify-center rounded-2xl border py-14 text-center">
+                        <div className="bg-muted mb-4 flex h-16 w-16 items-center justify-center rounded-2xl">
+                            <Ban className="text-muted-foreground h-7 w-7" />
                         </div>
-                    </Card>
+                        <p className="font-semibold">{t('No permissions found')}</p>
+                        <p className="text-muted-foreground mt-1 text-sm">{t('Try adjusting your search criteria')}</p>
+                        {searchTerm && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchTerm('')}
+                                className="text-primary mt-3 text-sm font-medium hover:underline"
+                            >
+                                {t('Clear')}
+                            </button>
+                        )}
+                    </div>
                 )}
             </div>
         </div>

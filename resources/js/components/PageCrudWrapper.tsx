@@ -495,21 +495,21 @@ export function PageCrudWrapper({
       noPadding
     >
       {/* Search and filters section */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-4">
+      <div className="bg-card mb-4 rounded-2xl border shadow-sm">
         <div className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <form onSubmit={handleSearch} className="flex gap-2">
                 <div className="relative w-64">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Search className="text-muted-foreground pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2" />
                   <Input
                     placeholder={`Search ${entity.name}...`}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9"
+                    className="h-9 w-full rounded-xl ps-9"
                   />
                 </div>
-                <Button type="submit" size="sm">
+                <Button type="submit" size="sm" className="h-9 rounded-xl">
                   <Search className="h-4 w-4 mr-1.5" />
                   {t("Search")}
                 </Button>
@@ -517,10 +517,10 @@ export function PageCrudWrapper({
               
               {filters.length > 0 && (
                 <div className="ml-2">
-                  <Button 
+                  <Button
                     variant={hasActiveFilters() ? "default" : "outline"}
-                    size="sm" 
-                    className="h-8 px-2 py-1"
+                    size="sm"
+                    className="h-9 rounded-xl px-3 py-1"
                     onClick={() => setShowFilters(!showFilters)}
                   >
                     <Filter className="h-3.5 w-3.5 mr-1.5" />
@@ -569,7 +569,7 @@ export function PageCrudWrapper({
           </div>
           
           {showFilters && filters.length > 0 && (
-            <div className="w-full mt-3 p-4 bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 rounded-md">
+            <div className="bg-muted/50 mt-3 w-full rounded-xl border p-4">
               <div className="flex flex-wrap gap-4 items-end">
                 {filters.map((filter) => {
                   const filterKey = filter.name || filter.key;
@@ -613,7 +613,7 @@ export function PageCrudWrapper({
       </div>
 
       {/* Table section */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden">
+      <div className="bg-card overflow-hidden rounded-2xl border shadow-sm">
         <CrudTable
           columns={table.columns}
           actions={table.actions}

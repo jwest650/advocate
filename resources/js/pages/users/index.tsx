@@ -1,18 +1,12 @@
 // pages/users/index.tsx
-import { useState, useEffect } from 'react';
-import { usersConfig } from '@/config/crud/users';
+import { useState } from 'react';
 import { PageTemplate } from '@/components/page-template';
 import { usePage, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
 import { SearchAndFilterBar } from '@/components/ui/search-and-filter-bar';
-import { Card } from '@/components/ui/card';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Filter, Search, Plus, Eye, Edit, Trash2, KeyRound, Lock, Unlock, LayoutGrid, List, MoreHorizontal, History } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, KeyRound, Lock, Unlock, MoreHorizontal, Mail, CalendarDays, ShieldCheck, Users as UsersIcon, UserCheck } from 'lucide-react';
 import { hasPermission } from '@/utils/authorization';
 import { CrudTable } from '@/components/CrudTable';
 import { CrudFormModal } from '@/components/CrudFormModal';
@@ -275,12 +269,87 @@ export default function Users() {
     });
   }
 
-  
+
   const breadcrumbs = [
     { title: t('Dashboard'), href: route('dashboard') },
     { title: t('Team Members'), href: route('users.index') },
     { title: t('Members') }
   ];
+
+  /* ── Presentation helpers ───────────────────────────────── */
+
+  const formatJoined = (value: string) =>
+    window.appSettings?.formatDateTime(value, false) || new Date(value).toLocaleDateString();
+
+  const RolePills = ({ userRoles, limit = 2 }: { userRoles: any[]; limit?: number }) => {
+    if (!userRoles || !userRoles.length) {
+      return <span className="text-muted-foreground text-xs">{t('No role')}</span>;
+    }
+
+    const shown = userRoles.slice(0, limit);
+    const rest = userRoles.length - shown.length;
+
+    return (
+      <div className="flex flex-wrap items-center gap-1.5">
+        {shown.map((role: any) => (
+          <span
+            key={role.id}
+            className="bg-primary/10 text-primary ring-primary/15 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset"
+          >
+            <ShieldCheck className="h-3 w-3" />
+            {role.label || role.name}
+          </span>
+        ))}
+        {rest > 0 && (
+          <span className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium">
+            +{rest}
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  const StatusPill = ({ status }: { status: string }) => {
+    const active = status === 'active';
+    return (
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
+          active
+            ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/25'
+            : 'bg-rose-50 text-rose-700 ring-rose-600/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-500/25'
+        }`}
+      >
+        <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+        {active ? t('Active') : t('Inactive')}
+      </span>
+    );
+  };
+
+  const summaryCards = [
+    {
+      label: t('Total Members'),
+      value: users?.total ?? 0,
+      icon: UsersIcon,
+      tone: 'from-blue-500 to-indigo-600',
+    },
+    {
+      label: t('Showing'),
+      value: `${users?.from ?? 0}–${users?.to ?? 0}`,
+      icon: UserCheck,
+      tone: 'from-emerald-500 to-teal-600',
+    },
+    {
+      label: t('Roles'),
+      value: (roles || []).length,
+      icon: ShieldCheck,
+      tone: 'from-violet-500 to-purple-600',
+    },
+  ];
+
+  const planUsage =
+    planLimits && planLimits.max_users
+      ? Math.min(100, Math.round((Number(planLimits.current_users) / Number(planLimits.max_users)) * 100))
+      : null;
 
   // Define table columns
   const columns = [
@@ -291,12 +360,22 @@ export default function Users() {
       render: (value: any, row: any) => {
         return (
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white">
-              {getInitials(row.name)}
+            <div className="relative shrink-0">
+              <div className="from-primary to-primary/70 ring-card flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-sm font-semibold text-white ring-2">
+                {getInitials(row.name)}
+              </div>
+              <span
+                className={`ring-card absolute -end-0.5 -bottom-0.5 h-3 w-3 rounded-full ring-2 ${
+                  row.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'
+                }`}
+              />
             </div>
-            <div>
-              <div className="font-medium">{row.name}</div>
-              <div className="text-sm text-muted-foreground">{row.email}</div>
+            <div className="min-w-0">
+              <div className="truncate font-semibold">{row.name}</div>
+              <div className="text-muted-foreground flex items-center gap-1 truncate text-xs">
+                <Mail className="h-3 w-3 shrink-0" />
+                {row.email}
+              </div>
             </div>
           </div>
         );
@@ -305,25 +384,12 @@ export default function Users() {
     {
       key: 'roles',
       label: t('Roles'),
-      render: (value: any) => {
-        if (!value || !value.length) return <span className="text-muted-foreground">No roles assigned</span>;
-
-        return value.map((role: any) => {
-          return <span key={role.id} className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 mr-1">{role.label || role.name}</span>;
-        });
-      }
+      render: (value: any) => <RolePills userRoles={value} />
     },
     {
       key: 'status',
       label: t('Status'),
-      render: (value: string) => (
-        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${value === 'active'
-          ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20'
-          : 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20'
-          }`}>
-          {value === 'active' ? t('Active') : t('Inactive')}
-        </span>
-      )
+      render: (value: string) => <StatusPill status={value} />
     },
     {
       key: 'created_at',
@@ -381,228 +447,139 @@ export default function Users() {
       breadcrumbs={breadcrumbs}
       noPadding
     >
-      {/* Search and filters section */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-4 p-4">
-        <SearchAndFilterBar
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          onSearch={handleSearch}
-          filters={[
-            {
-              name: 'role',
-              label: t('Role'),
-              type: 'select',
-              value: selectedRole,
-              onChange: handleRoleFilter,
-              options: [
-                { value: 'all', label: t('All Roles') },
-                ...(roles || []).map((role: any) => ({
-                  value: role.id.toString(),
-                  label: role.label || role.name
-                }))
-              ]
-            }
-          ]}
-          showFilters={showFilters}
-          setShowFilters={setShowFilters}
-          hasActiveFilters={hasActiveFilters}
-          activeFilterCount={activeFilterCount}
-          onResetFilters={handleResetFilters}
-          onApplyFilters={applyFilters}
-          currentPerPage={pageFilters.per_page?.toString() || "10"}
-          onPerPageChange={(value) => {
-            const params: any = { page: 1, per_page: parseInt(value) };
+      {/* Scoped animations */}
+      <style>{`
+        @keyframes usersFadeUp {
+          from { opacity: 0; transform: translateY(14px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .users-in { opacity: 0; animation: usersFadeUp .5s cubic-bezier(.16,.84,.44,1) forwards; }
+        @media (prefers-reduced-motion: reduce) {
+          .users-in { animation: none; opacity: 1; }
+        }
+      `}</style>
 
-            if (searchTerm) {
-              params.search = searchTerm;
-            }
-
-            if (selectedRole !== 'all') {
-              params.role = selectedRole;
-            }
-
-            router.get(route('users.index'), params, { preserveState: true, preserveScroll: true });
-          }}
-          showViewToggle={true}
-          activeView={activeView}
-          onViewChange={setActiveView}
-        />
-      </div>
-
-      {/* Content section */}
-      {activeView === 'list' ? (
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden">
-          <CrudTable
-            columns={columns}
-            actions={actions}
-            data={users?.data || []}
-            from={users?.from || 1}
-            onAction={handleAction}
-            sortField={pageFilters.sort_field}
-            sortDirection={pageFilters.sort_direction}
-            onSort={handleSort}
-            permissions={permissions}
-            entityPermissions={{
-              view: 'view-users',
-              create: 'create-users',
-              edit: 'edit-users',
-              delete: 'delete-users'
-            }}
-          />
-
-          {/* Pagination section */}
-          <Pagination
-            from={users?.from || 0}
-            to={users?.to || 0}
-            total={users?.total || 0}
-            links={users?.links}
-            entityName={t("users")}
-            onPageChange={(url) => router.get(url)}
-          />
-        </div>
-      ) : (
-        <div>
-          {/* Grid View */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {users?.data?.map((user: any) => (
-              <Card key={user.id} className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg shadow">
-                {/* Header */}
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-start space-x-4">
-                      <div className="h-16 w-16 rounded-full bg-primary text-white flex items-center justify-center text-lg font-bold">
-                        {getInitials(user.name)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{user.name}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{user.email}</p>
-                        <div className="flex items-center">
-                          <div className={`h-2 w-2 rounded-full mr-2 ${
-                            user.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
-                          }`}></div>
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {user.status === 'active' ? t('Active') : t('Inactive')}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions dropdown */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="1"></circle>
-                            <circle cx="12" cy="5" r="1"></circle>
-                            <circle cx="12" cy="19" r="1"></circle>
-                          </svg>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48 z-50" sideOffset={5}>
-                        {hasPermission(permissions, 'view-users') && (
-                          <DropdownMenuItem onClick={() => handleAction('view', user)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            <span>{t("View User")}</span>
-                          </DropdownMenuItem>
-                        )}
-
-                        {hasPermission(permissions, 'edit-users') && (
-                          <DropdownMenuItem onClick={() => handleAction('reset-password', user)}>
-                            <KeyRound className="h-4 w-4 mr-2" />
-                            <span>{t("Reset Password")}</span>
-                          </DropdownMenuItem>
-                        )}
-                        {hasPermission(permissions, 'edit-users') && (
-                          <DropdownMenuItem onClick={() => handleAction('toggle-status', user)}>
-                            {user.status === 'active' ?
-                              <Lock className="h-4 w-4 mr-2" /> :
-                              <Unlock className="h-4 w-4 mr-2" />
-                            }
-                            <span>{user.status === 'active' ? t("Disable User") : t("Enable User")}</span>
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator />
-                        {hasPermission(permissions, 'edit-users') && (
-                          <DropdownMenuItem onClick={() => handleAction('edit', user)} className="text-amber-600">
-                            <Edit className="h-4 w-4 mr-2" />
-                            <span>{t("Edit")}</span>
-                          </DropdownMenuItem>
-                        )}
-                        {hasPermission(permissions, 'delete-users') && (
-                          <DropdownMenuItem onClick={() => handleAction('delete', user)} className="text-rose-600">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            <span>{t("Delete")}</span>
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-
-                  {/* Role info */}
-                  <div className="border border-gray-200 dark:border-gray-700 rounded-md p-3 mb-4">
-                    <div className="flex flex-wrap gap-1">
-                      {user.roles && user.roles.length > 0 ? (
-                        user.roles.map((role: any) => (
-                          <span key={role.id} className="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-900/30 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300 ring-1 ring-inset ring-blue-700/10 dark:ring-blue-700/30">
-                            {role.label || role.name}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-muted-foreground text-xs dark:text-gray-400">{t("No role")}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Joined date */}
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                    {t("Joined:")} {window.appSettings?.formatDateTime(user.created_at, false) || new Date(user.created_at).toLocaleDateString()}
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="flex gap-2">
-                    {hasPermission(permissions, 'edit-users') && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAction('edit', user)}
-                        className="flex-1 h-9 text-sm border-gray-300 dark:border-gray-600 dark:text-gray-200"
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        {t("Edit")}
-                      </Button>
-                    )}
-
-                    {hasPermission(permissions, 'view-users') && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAction('view', user)}
-                        className="flex-1 h-9 text-sm border-gray-300 dark:border-gray-600 dark:text-gray-200"
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        {t("View")}
-                      </Button>
-                    )}
-
-                    {hasPermission(permissions, 'delete-users') && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAction('delete', user)}
-                        className="flex-1 h-9 text-sm text-gray-700 border-gray-300 dark:border-gray-600 dark:text-gray-200"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        {t("Delete")}
-                      </Button>
-                    )}
+      <div className="space-y-4">
+        {/* Summary strip */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {summaryCards.map((card, index) => {
+            const CardIcon = card.icon;
+            return (
+              <div
+                key={card.label}
+                className="users-in bg-card group relative overflow-hidden rounded-2xl border p-4 transition-all duration-300 hover:shadow-md"
+                style={{ animationDelay: `${index * 70}ms` }}
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white transition-transform duration-300 group-hover:scale-105 ${card.tone}`}
+                  >
+                    <CardIcon className="h-[18px] w-[18px]" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.12em] uppercase">{card.label}</p>
+                    <p className="mt-0.5 text-xl leading-none font-bold tabular-nums">{card.value}</p>
                   </div>
                 </div>
-              </Card>
-            ))}
-          </div>
+              </div>
+            );
+          })}
 
-          {/* Pagination for grid view */}
-          <div className="mt-6 bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden">
+          {/* Plan usage — only when the backend reports limits */}
+          {planUsage !== null && (
+            <div
+              className="users-in bg-card relative overflow-hidden rounded-2xl border p-4 transition-all duration-300 hover:shadow-md"
+              style={{ animationDelay: '210ms' }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.12em] uppercase">{t('Plan Usage')}</p>
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  {planLimits.current_users} / {planLimits.max_users}
+                </span>
+              </div>
+              <p className="mt-1 text-xl leading-none font-bold tabular-nums">{planUsage}%</p>
+              <div className="bg-muted mt-2.5 h-1.5 w-full overflow-hidden rounded-full">
+                <div
+                  className={`h-full rounded-full transition-[width] duration-1000 ease-out ${
+                    planUsage >= 100 ? 'bg-rose-500' : planUsage >= 80 ? 'bg-amber-500' : 'bg-primary'
+                  }`}
+                  style={{ width: `${planUsage}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Search and filters section */}
+        <div className="users-in bg-card rounded-2xl border p-4 shadow-sm" style={{ animationDelay: '120ms' }}>
+          <SearchAndFilterBar
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onSearch={handleSearch}
+            filters={[
+              {
+                name: 'role',
+                label: t('Role'),
+                type: 'select',
+                value: selectedRole,
+                onChange: handleRoleFilter,
+                options: [
+                  { value: 'all', label: t('All Roles') },
+                  ...(roles || []).map((role: any) => ({
+                    value: role.id.toString(),
+                    label: role.label || role.name
+                  }))
+                ]
+              }
+            ]}
+            showFilters={showFilters}
+            setShowFilters={setShowFilters}
+            hasActiveFilters={hasActiveFilters}
+            activeFilterCount={activeFilterCount}
+            onResetFilters={handleResetFilters}
+            onApplyFilters={applyFilters}
+            currentPerPage={pageFilters.per_page?.toString() || "10"}
+            onPerPageChange={(value) => {
+              const params: any = { page: 1, per_page: parseInt(value) };
+
+              if (searchTerm) {
+                params.search = searchTerm;
+              }
+
+              if (selectedRole !== 'all') {
+                params.role = selectedRole;
+              }
+
+              router.get(route('users.index'), params, { preserveState: true, preserveScroll: true });
+            }}
+            showViewToggle={true}
+            activeView={activeView}
+            onViewChange={setActiveView}
+          />
+        </div>
+
+        {/* Content section */}
+        {activeView === 'list' ? (
+          <div className="users-in bg-card overflow-hidden rounded-2xl border shadow-sm" style={{ animationDelay: '180ms' }}>
+            <CrudTable
+              columns={columns}
+              actions={actions}
+              data={users?.data || []}
+              from={users?.from || 1}
+              onAction={handleAction}
+              sortField={pageFilters.sort_field}
+              sortDirection={pageFilters.sort_direction}
+              onSort={handleSort}
+              permissions={permissions}
+              entityPermissions={{
+                view: 'view-users',
+                create: 'create-users',
+                edit: 'edit-users',
+                delete: 'delete-users'
+              }}
+            />
+
+            {/* Pagination section */}
             <Pagination
               from={users?.from || 0}
               to={users?.to || 0}
@@ -612,8 +589,186 @@ export default function Users() {
               onPageChange={(url) => router.get(url)}
             />
           </div>
-        </div>
-      )}
+        ) : (
+          <div>
+            {/* Grid View */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {users?.data?.map((user: any, index: number) => (
+                <div
+                  key={user.id}
+                  className="users-in bg-card group relative overflow-hidden rounded-2xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                  style={{ animationDelay: `${180 + index * 50}ms` }}
+                >
+                  {/* Brand band */}
+                  <div className="from-primary/20 via-primary/10 relative h-20 bg-gradient-to-br to-transparent">
+                    <div
+                      className="absolute inset-0 opacity-40"
+                      style={{
+                        backgroundImage:
+                          'radial-gradient(circle at 25% 60%, rgba(255,255,255,.35) 1px, transparent 1px)',
+                        backgroundSize: '18px 18px',
+                      }}
+                    />
+                    {/* Actions dropdown */}
+                    <div className="absolute end-2 top-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="bg-card/70 hover:bg-card h-8 w-8 p-0 backdrop-blur transition-colors"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="z-50 w-48" sideOffset={5}>
+                          {hasPermission(permissions, 'view-users') && (
+                            <DropdownMenuItem onClick={() => handleAction('view', user)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              <span>{t("View User")}</span>
+                            </DropdownMenuItem>
+                          )}
+
+                          {hasPermission(permissions, 'edit-users') && (
+                            <DropdownMenuItem onClick={() => handleAction('reset-password', user)}>
+                              <KeyRound className="mr-2 h-4 w-4" />
+                              <span>{t("Reset Password")}</span>
+                            </DropdownMenuItem>
+                          )}
+                          {hasPermission(permissions, 'edit-users') && (
+                            <DropdownMenuItem onClick={() => handleAction('toggle-status', user)}>
+                              {user.status === 'active' ?
+                                <Lock className="mr-2 h-4 w-4" /> :
+                                <Unlock className="mr-2 h-4 w-4" />
+                              }
+                              <span>{user.status === 'active' ? t("Disable User") : t("Enable User")}</span>
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          {hasPermission(permissions, 'edit-users') && (
+                            <DropdownMenuItem onClick={() => handleAction('edit', user)} className="text-amber-600">
+                              <Edit className="mr-2 h-4 w-4" />
+                              <span>{t("Edit")}</span>
+                            </DropdownMenuItem>
+                          )}
+                          {hasPermission(permissions, 'delete-users') && (
+                            <DropdownMenuItem onClick={() => handleAction('delete', user)} className="text-rose-600">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              <span>{t("Delete")}</span>
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  <div className="-mt-9 px-5 pb-5">
+                    {/* Avatar */}
+                    <div className="relative inline-block">
+                      <div className="from-primary to-primary/70 ring-card flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br text-lg font-bold text-white shadow-lg ring-4 transition-transform duration-300 group-hover:scale-105">
+                        {getInitials(user.name)}
+                      </div>
+                      <span
+                        className={`ring-card absolute -end-1 -bottom-1 h-4 w-4 rounded-full ring-[3px] ${
+                          user.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'
+                        }`}
+                      />
+                    </div>
+
+                    <div className="mt-3 flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-base font-bold">{user.name}</h3>
+                        <p className="text-muted-foreground mt-0.5 flex items-center gap-1 truncate text-xs">
+                          <Mail className="h-3 w-3 shrink-0" />
+                          {user.email}
+                        </p>
+                      </div>
+                      <StatusPill status={user.status} />
+                    </div>
+
+                    {/* Role info */}
+                    <div className="mt-3 min-h-[28px]">
+                      <RolePills userRoles={user.roles} limit={3} />
+                    </div>
+
+                    {/* Joined date */}
+                    <div className="text-muted-foreground mt-3 flex items-center gap-1.5 border-t pt-3 text-xs">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      {t("Joined:")} {formatJoined(user.created_at)}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="mt-3 flex gap-2">
+                      {hasPermission(permissions, 'edit-users') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAction('edit', user)}
+                          className="hover:border-primary/40 hover:text-primary h-9 flex-1 rounded-xl text-xs transition-all duration-300"
+                        >
+                          <Edit className="mr-1.5 h-3.5 w-3.5" />
+                          {t("Edit")}
+                        </Button>
+                      )}
+
+                      {hasPermission(permissions, 'view-users') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAction('view', user)}
+                          className="hover:border-primary/40 hover:text-primary h-9 flex-1 rounded-xl text-xs transition-all duration-300"
+                        >
+                          <Eye className="mr-1.5 h-3.5 w-3.5" />
+                          {t("View")}
+                        </Button>
+                      )}
+
+                      {hasPermission(permissions, 'delete-users') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAction('delete', user)}
+                          className="h-9 w-9 rounded-xl p-0 transition-all duration-300 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:hover:border-rose-500/30 dark:hover:bg-rose-500/10"
+                          title={t("Delete")}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Empty state */}
+            {(!users?.data || users.data.length === 0) && (
+              <div className="bg-card flex flex-col items-center justify-center rounded-2xl border py-16 text-center">
+                <div className="bg-muted mb-4 flex h-16 w-16 items-center justify-center rounded-2xl">
+                  <UsersIcon className="text-muted-foreground h-7 w-7" />
+                </div>
+                <p className="font-semibold">{t('No members found')}</p>
+                {hasActiveFilters() && (
+                  <Button variant="outline" size="sm" onClick={handleResetFilters} className="mt-4 rounded-full">
+                    {t('Reset Filters')}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Pagination for grid view */}
+            <div className="bg-card mt-4 overflow-hidden rounded-2xl border shadow-sm">
+              <Pagination
+                from={users?.from || 0}
+                to={users?.to || 0}
+                total={users?.total || 0}
+                links={users?.links}
+                entityName={t("users")}
+                onPageChange={(url) => router.get(url)}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Form Modal */}
       <CrudFormModal

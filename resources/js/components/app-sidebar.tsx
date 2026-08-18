@@ -927,9 +927,15 @@ export function AppSidebar() {
 
     return (
         <Sidebar side={effectivePosition} collapsible={collapsible} variant={variant} className={style !== 'plain' ? 'sidebar-custom-style' : ''}>
-            <SidebarHeader className={style !== 'plain' ? 'sidebar-styled' : ''} style={sidebarStyle}>
+            <SidebarHeader
+                className={`border-sidebar-border/60 border-b p-3 group-data-[collapsible=icon]:p-2 ${style !== 'plain' ? 'sidebar-styled' : ''}`}
+                style={sidebarStyle}
+            >
                 <div className="flex items-center justify-center">
-                    <Link href={getFirstAvailableHref()} className="flex items-center justify-center">
+                    <Link
+                        href={getFirstAvailableHref()}
+                        className="flex items-center justify-center rounded-xl p-1 transition-transform duration-300 hover:scale-[1.03] active:scale-95"
+                    >
                         {/* Logo for expanded sidebar */}
                         <div className="flex items-center group-data-[collapsible=icon]:hidden">
                             {(() => {
@@ -952,7 +958,7 @@ export function AppSidebar() {
                         </div>
 
                         {/* Icon for collapsed sidebar */}
-                        <div className="hidden h-8 w-8 group-data-[collapsible=icon]:block">
+                        <div className="hidden h-8 w-8 shrink-0 group-data-[collapsible=icon]:block">
                             {(() => {
                                 const displayFavicon = favicon ? getImagePath(favicon) : '';
 
@@ -965,7 +971,7 @@ export function AppSidebar() {
                                         onError={() => updateBrandSettings({ favicon: '' })}
                                     />
                                 ) : (
-                                    <div className="bg-primary flex h-8 w-8 items-center justify-center rounded font-bold text-white shadow-sm">
+                                    <div className="bg-primary shadow-primary/25 flex h-8 w-8 items-center justify-center rounded-xl font-bold text-white shadow-lg">
                                         W
                                     </div>
                                 );
@@ -977,8 +983,8 @@ export function AppSidebar() {
                 {/* Business Switcher removed */}
             </SidebarHeader>
 
-            <SidebarContent>
-                <div style={sidebarStyle} className={`h-full ${style !== 'plain' ? 'sidebar-styled' : ''}`}>
+            <SidebarContent className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-sidebar-border">
+                <div style={sidebarStyle} className={`h-full py-2 ${style !== 'plain' ? 'sidebar-styled' : ''}`}>
                     <NavMain items={filteredNavItems} position={effectivePosition} />
                 </div>
             </SidebarContent>

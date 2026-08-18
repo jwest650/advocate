@@ -1,5 +1,5 @@
 import { useForm, router, usePage } from '@inertiajs/react';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock, Loader2, ArrowRight, ShieldCheck, Building2, User, Users, Sparkles } from 'lucide-react';
 import { FormEventHandler, useState, useEffect } from 'react';
 
 import InputError from '@/components/input-error';
@@ -43,6 +43,7 @@ export default function Login({ status, canResetPassword, demoBusinesses = [] }:
     const [isDemo, setIsDemo] = useState<boolean>(false);
     // Always show business buttons by default
     const [showBusinessButtons, setShowBusinessButtons] = useState<boolean>(true);
+    const [focusedField, setFocusedField] = useState<string | null>(null);
     const { props } = usePage();
     const { settings = {} } = props as any;
     const isDemos = (props as any).globalSettings?.is_demo;
@@ -71,9 +72,9 @@ export default function Login({ status, canResetPassword, demoBusinesses = [] }:
 
     const submit: FormEventHandler = async (e) => {
         e.preventDefault();
-        
+
         let tokenToSend = recaptchaToken;
-        
+
         if (recaptchaEnabled) {
             try {
                 const token = await executeRecaptcha();
@@ -87,7 +88,7 @@ export default function Login({ status, canResetPassword, demoBusinesses = [] }:
                 return;
             }
         }
-        
+
         post(route('login'), {
             ...data,
             recaptcha_token: tokenToSend || ''
@@ -96,6 +97,42 @@ export default function Login({ status, canResetPassword, demoBusinesses = [] }:
         });
     };
 
+    const quickLogin = async (email: string) => {
+        let tokenToSend = recaptchaToken || '';
+
+        if (recaptchaEnabled) {
+            try {
+                const token = await executeRecaptcha();
+                if (!token) {
+                    alert(t('Please complete the reCAPTCHA verification'));
+                    return;
+                }
+                tokenToSend = token;
+            } catch {
+                alert(t('reCAPTCHA verification failed. Please try again.'));
+                return;
+            }
+        }
+
+        router.post(route('login'), {
+            email,
+            password: 'password',
+            remember: false,
+            recaptcha_token: tokenToSend
+        });
+    };
+
+    const demoAccounts = [
+        { label: t('Login as Super Admin'), email: 'superadmin@example.com', icon: ShieldCheck },
+        { label: t('Login as Company'), email: 'company@example.com', icon: Building2 },
+        { label: t('Login as Client'), email: 'michael_brown_2@example.com', icon: User },
+        { label: t('Login as Team Member'), email: 'linda_davis_2@example.com', icon: Users },
+    ];
+
+    const fieldWrapperStyle = (name: string) => ({
+        boxShadow: focusedField === name ? `0 0 0 4px ${primaryColor}1f` : '0 1px 2px rgba(16,24,40,0.04)',
+        borderColor: focusedField === name ? primaryColor : 'rgb(226 232 240)',
+    });
 
     return (
         <AuthLayout
@@ -103,13 +140,61 @@ export default function Login({ status, canResetPassword, demoBusinesses = [] }:
             description={t("Enter your credentials to access your account")}
             status={status}
         >
+            {/* Scoped animations for the login experience */}
+            <style>{`
+                @keyframes lgFadeUp {
+                    from { opacity: 0; transform: translateY(14px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes lgShimmer {
+                    0% { transform: translateX(-120%); }
+                    100% { transform: translateX(220%); }
+                }
+                @keyframes lgGlow {
+                    0%, 100% { opacity: .35; transform: scale(1); }
+                    50% { opacity: .7; transform: scale(1.06); }
+                }
+                .lg-reveal {
+                    opacity: 0;
+                    animation: lgFadeUp .55s cubic-bezier(.16,.84,.44,1) forwards;
+                }
+                .lg-shimmer::after {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,.35) 50%, transparent 80%);
+                    transform: translateX(-120%);
+                }
+                .lg-shimmer:hover::after {
+                    animation: lgShimmer 1.1s ease-in-out;
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .lg-reveal { animation: none; opacity: 1; }
+                    .lg-shimmer:hover::after { animation: none; }
+                }
+            `}</style>
+
             <form className="space-y-5" onSubmit={submit}>
                 <div className="space-y-4">
-                    <div className="relative">
-                        <div className="flex justify-between items-center mb-2">
-                            <Label htmlFor="email" className="block text-sm font-medium text-gray-900">{t("Email")}</Label>
+                    {/* Email */}
+                    <div className="lg-reveal" style={{ animationDelay: '60ms' }}>
+                        <div className="mb-2 flex items-center justify-between">
+                            <Label
+                                htmlFor="email"
+                                className="block text-[13px] font-medium tracking-wide transition-colors duration-300"
+                                style={{ color: focusedField === 'email' ? primaryColor : 'rgb(55 65 81)' }}
+                            >
+                                {t("Email")}
+                            </Label>
                         </div>
-                        <div className="relative">
+                        <div
+                            className="group relative rounded-xl border bg-slate-50/70 transition-all duration-300 focus-within:bg-white"
+                            style={fieldWrapperStyle('email')}
+                        >
+                            <Mail
+                                className="pointer-events-none absolute start-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 transition-all duration-300"
+                                style={{ color: focusedField === 'email' ? primaryColor : 'rgb(148 163 184)' }}
+                            />
                             <Input
                                 id="email"
                                 type="email"
@@ -120,29 +205,49 @@ export default function Login({ status, canResetPassword, demoBusinesses = [] }:
                                 value={data.email}
                                 onChange={(e) => setData('email', e.target.value)}
                                 placeholder={t("Enter your email")}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none transition-colors placeholder-gray-400"
-                                onFocus={(e) => e.target.style.borderColor = primaryColor}
-                                onBlur={(e) => e.target.style.borderColor = "rgb(209 213 219)"}
+                                className="h-12 w-full rounded-xl border-0 bg-transparent ps-11 pe-4 text-sm text-gray-900 shadow-none outline-none placeholder:text-slate-400 focus-visible:border-0 focus-visible:ring-0"
+                                onFocus={() => setFocusedField('email')}
+                                onBlur={() => setFocusedField(null)}
                             />
                         </div>
                         <InputError message={errors.email} />
                     </div>
 
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <Label htmlFor="password" className="block text-sm font-medium text-gray-900">{t("Password")}</Label>
+                    {/* Password */}
+                    <div className="lg-reveal" style={{ animationDelay: '140ms' }}>
+                        <div className="mb-2 flex items-center justify-between">
+                            <Label
+                                htmlFor="password"
+                                className="block text-[13px] font-medium tracking-wide transition-colors duration-300"
+                                style={{ color: focusedField === 'password' ? primaryColor : 'rgb(55 65 81)' }}
+                            >
+                                {t("Password")}
+                            </Label>
                             {canResetPassword && (
                                 <TextLink
                                     href={route('password.request')}
-                                    className="text-sm no-underline hover:underline hover:underline-primary"
+                                    className="group text-[13px] font-medium no-underline transition-opacity duration-200 hover:opacity-80"
                                     style={{ color: primaryColor }}
                                     tabIndex={5}
                                 >
-                                    {t("Forgot password?")}
+                                    <span className="relative">
+                                        {t("Forgot password?")}
+                                        <span
+                                            className="absolute -bottom-0.5 start-0 h-px w-0 transition-all duration-300 group-hover:w-full"
+                                            style={{ backgroundColor: primaryColor }}
+                                        />
+                                    </span>
                                 </TextLink>
                             )}
                         </div>
-                        <div className="relative">
+                        <div
+                            className="group relative rounded-xl border bg-slate-50/70 transition-all duration-300 focus-within:bg-white"
+                            style={fieldWrapperStyle('password')}
+                        >
+                            <Lock
+                                className="pointer-events-none absolute start-3.5 top-1/2 z-10 h-[18px] w-[18px] -translate-y-1/2 transition-all duration-300"
+                                style={{ color: focusedField === 'password' ? primaryColor : 'rgb(148 163 184)' }}
+                            />
                             <Input
                                 id="password"
                                 type="password"
@@ -152,24 +257,28 @@ export default function Login({ status, canResetPassword, demoBusinesses = [] }:
                                 value={data.password}
                                 onChange={(e) => setData('password', e.target.value)}
                                 placeholder={t("Enter your password")}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none transition-colors placeholder-gray-400"
-                                onFocus={(e) => e.target.style.borderColor = primaryColor}
-                                onBlur={(e) => e.target.style.borderColor = "rgb(209 213 219)"}
+                                className="h-12 w-full rounded-xl border-0 bg-transparent ps-11 pe-11 text-sm text-gray-900 shadow-none outline-none placeholder:text-slate-400 focus-visible:border-0 focus-visible:ring-0"
+                                onFocus={() => setFocusedField('password')}
+                                onBlur={() => setFocusedField(null)}
                             />
                         </div>
                         <InputError message={errors.password} />
                     </div>
 
-                    <div className="flex items-center !mt-4 !mb-5">
-                       <Checkbox
+                    {/* Remember me */}
+                    <div className="lg-reveal !mt-4 !mb-5 flex items-center" style={{ animationDelay: '220ms' }}>
+                        <Checkbox
                             id="remember"
                             name="remember"
                             checked={data.remember}
                             onClick={() => setData('remember', !data.remember)}
                             tabIndex={3}
-                            className="border border-gray-300 rounded"
+                            className="rounded-[5px] border border-slate-300 transition-all duration-200 data-[state=checked]:scale-105"
+                            style={data.remember ? { backgroundColor: primaryColor, borderColor: primaryColor } : undefined}
                         />
-                        <Label htmlFor="remember" className="ms-2 text-sm text-gray-600">{t("Remember me")}</Label>
+                        <Label htmlFor="remember" className="ms-2 cursor-pointer text-[13px] text-slate-600 transition-colors duration-200 hover:text-slate-900">
+                            {t("Remember me")}
+                        </Label>
                     </div>
                 </div>
 
@@ -179,168 +288,106 @@ export default function Login({ status, canResetPassword, demoBusinesses = [] }:
                     onError={() => setRecaptchaToken('')}
                 />
 
-                <button 
-                    type="submit" 
-                    disabled={processing}
-                    tabIndex={4}
-                    className="w-full text-white py-2.5 text-sm font-medium tracking-wide transition-all duration-200 rounded-md shadow-md hover:shadow-lg transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed" 
-                    style={{ backgroundColor: primaryColor }}
-                >
-                    {processing ? t("Log in...") : t("Log in")}
-                </button>
+                {/* Submit */}
+                <div className="lg-reveal relative" style={{ animationDelay: '300ms' }}>
+                    <div
+                        className="absolute inset-x-3 -bottom-1 h-8 rounded-full blur-xl"
+                        style={{ backgroundColor: primaryColor, animation: 'lgGlow 3.5s ease-in-out infinite' }}
+                    />
+                    <button
+                        type="submit"
+                        disabled={processing}
+                        tabIndex={4}
+                        className="lg-shimmer group relative w-full overflow-hidden rounded-xl py-3 text-sm font-semibold tracking-wide text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                        style={{
+                            backgroundImage: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}d9 55%, ${primaryColor} 100%)`,
+                            boxShadow: `0 8px 24px -8px ${primaryColor}99`,
+                        }}
+                    >
+                        <span className="relative z-10 flex items-center justify-center gap-2">
+                            {processing ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    {t("Log in...")}
+                                </>
+                            ) : (
+                                <>
+                                    {t("Log in")}
+                                    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1" />
+                                </>
+                            )}
+                        </span>
+                    </button>
+                </div>
 
-                <div className="text-center">
-                    <p className="text-sm text-gray-500">{t("Don't have an account?")}{' '}
+                <div className="lg-reveal text-center" style={{ animationDelay: '360ms' }}>
+                    <p className="text-[13px] text-slate-500">{t("Don't have an account?")}{' '}
                         <TextLink
                             href={route('register')}
-                            className="font-medium hover:underline"
+                            className="group relative font-semibold no-underline"
                             style={{ color: primaryColor }}
                             tabIndex={6}
                         >
-                            {t("Sign Up")}
+                            <span className="relative">
+                                {t("Sign Up")}
+                                <span
+                                    className="absolute -bottom-0.5 start-0 h-px w-0 transition-all duration-300 group-hover:w-full"
+                                    style={{ backgroundColor: primaryColor }}
+                                />
+                            </span>
                         </TextLink>
                     </p>
                 </div>
 
                 {isDemo && (
-                    <div className="mt-5">
-                        <div className="flex items-center">
-                            <div className="flex-1 h-px bg-gray-200"></div>
-                            <div className="w-2 h-2 rotate-45 mx-4" style={{ backgroundColor: primaryColor }}></div>
-                            <div className="flex-1 h-px bg-gray-200"></div>
+                    <div className="lg-reveal mt-6" style={{ animationDelay: '420ms' }}>
+                        <div className="flex items-center gap-3">
+                            <div className="h-px flex-1 bg-gradient-to-r from-transparent to-slate-200" />
+                            <span
+                                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold tracking-wider uppercase"
+                                style={{ backgroundColor: `${primaryColor}14`, color: primaryColor }}
+                            >
+                                <Sparkles className="h-3 w-3" />
+                                {t('Quick Access')}
+                            </span>
+                            <div className="h-px flex-1 bg-gradient-to-l from-transparent to-slate-200" />
                         </div>
                     </div>
                 )}
 
                 {isDemo && (
-                    <div>
-                        <h3 className="text-sm font-medium text-gray-900 tracking-wider mb-4 text-center">{t('Quick Access')}</h3>
-                        <div className="grid sm:grid-cols-2 gap-3">
-                            <Button
-                                type="button"
-                                onClick={async () => {
-                                    let tokenToSend = recaptchaToken || '';
-                                    
-                                    if (recaptchaEnabled) {
-                                        try {
-                                            const token = await executeRecaptcha();
-                                            if (!token) {
-                                                alert(t('Please complete the reCAPTCHA verification'));
-                                                return;
-                                            }
-                                            tokenToSend = token;
-                                        } catch {
-                                            alert(t('reCAPTCHA verification failed. Please try again.'));
-                                            return;
-                                        }
-                                    }
-                                    
-                                    router.post(route('login'), {
-                                        email: 'superadmin@example.com',
-                                        password: 'password',
-                                        remember: false,
-                                        recaptcha_token: tokenToSend
-                                    });
-                                }}
-                                className="group h-auto relative py-2 px-4 border text-[13px] font-medium text-white transition-all duration-200 rounded-md shadow-sm hover:shadow-md transform hover:scale-[1.02]"
-                                style={{ backgroundColor: primaryColor, borderColor: primaryColor }}
-                            >
-                                {t('Login as Super Admin')}
-                            </Button>
-                            <Button
-                                type="button"
-                                onClick={async () => {
-                                    let tokenToSend = recaptchaToken || '';
-                                    
-                                    if (recaptchaEnabled) {
-                                        try {
-                                            const token = await executeRecaptcha();
-                                            if (!token) {
-                                                alert(t('Please complete the reCAPTCHA verification'));
-                                                return;
-                                            }
-                                            tokenToSend = token;
-                                        } catch {
-                                            alert(t('reCAPTCHA verification failed. Please try again.'));
-                                            return;
-                                        }
-                                    }
-                                    
-                                    router.post(route('login'), {
-                                        email: 'company@example.com',
-                                        password: 'password',
-                                        remember: false,
-                                        recaptcha_token: tokenToSend
-                                    });
-                                }}
-                                className="group h-auto relative py-2 px-4 border text-[13px] font-medium text-white transition-all duration-200 rounded-md shadow-sm hover:shadow-md transform hover:scale-[1.02]"
-                                style={{ backgroundColor: primaryColor, borderColor: primaryColor }}
-                            >
-                                {t('Login as Company')}
-                            </Button>
-                            <Button
-                                type="button"
-                                onClick={async () => {
-                                    let tokenToSend = recaptchaToken || '';
-                                    
-                                    if (recaptchaEnabled) {
-                                        try {
-                                            const token = await executeRecaptcha();
-                                            if (!token) {
-                                                alert(t('Please complete the reCAPTCHA verification'));
-                                                return;
-                                            }
-                                            tokenToSend = token;
-                                        } catch {
-                                            alert(t('reCAPTCHA verification failed. Please try again.'));
-                                            return;
-                                        }
-                                    }
-                                    
-                                    router.post(route('login'), {
-                                        email: 'michael_brown_2@example.com',
-                                        password: 'password',
-                                        remember: false,
-                                        recaptcha_token: tokenToSend
-                                    });
-                                }}
-                                className="group h-auto relative py-2 px-4 border text-[13px] font-medium text-white transition-all duration-200 rounded-md shadow-sm hover:shadow-md transform hover:scale-[1.02]"
-                                style={{ backgroundColor: primaryColor, borderColor: primaryColor }}
-                            >
-                                {t('Login as Client')}
-                            </Button>
-                            <Button
-                                type="button"
-                                onClick={async () => {
-                                    let tokenToSend = recaptchaToken || '';
-                                    
-                                    if (recaptchaEnabled) {
-                                        try {
-                                            const token = await executeRecaptcha();
-                                            if (!token) {
-                                                alert(t('Please complete the reCAPTCHA verification'));
-                                                return;
-                                            }
-                                            tokenToSend = token;
-                                        } catch {
-                                            alert(t('reCAPTCHA verification failed. Please try again.'));
-                                            return;
-                                        }
-                                    }
-                                    
-                                    router.post(route('login'), {
-                                        email: 'linda_davis_2@example.com',
-                                        password: 'password',
-                                        remember: false,
-                                        recaptcha_token: tokenToSend
-                                    });
-                                }}
-                                className="group h-auto relative py-2 px-4 border text-[13px] font-medium text-white transition-all duration-200 rounded-md shadow-sm hover:shadow-md transform hover:scale-[1.02]"
-                                style={{ backgroundColor: primaryColor, borderColor: primaryColor }}
-                            >
-                                {t('Login as Team Member')}
-                            </Button>
-                        </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        {demoAccounts.map((account, index) => {
+                            const Icon = account.icon;
+                            return (
+                                <Button
+                                    key={account.email}
+                                    type="button"
+                                    onClick={() => quickLogin(account.email)}
+                                    className="lg-reveal group relative h-auto justify-start gap-2.5 overflow-hidden rounded-xl border bg-white px-3.5 py-3 text-[13px] font-medium text-slate-700 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:text-slate-900 hover:shadow-lg"
+                                    style={{
+                                        borderColor: 'rgb(226 232 240)',
+                                        animationDelay: `${480 + index * 70}ms`,
+                                    }}
+                                >
+                                    <span
+                                        className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                                        style={{ backgroundImage: `linear-gradient(135deg, ${primaryColor}12, transparent 70%)` }}
+                                    />
+                                    <span
+                                        className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 group-hover:scale-110"
+                                        style={{ backgroundColor: `${primaryColor}1a`, color: primaryColor }}
+                                    >
+                                        <Icon className="h-[15px] w-[15px]" />
+                                    </span>
+                                    <span className="relative z-10 truncate text-start">{account.label}</span>
+                                    <ArrowRight
+                                        className="relative z-10 ms-auto h-3.5 w-3.5 shrink-0 opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100 rtl:rotate-180"
+                                        style={{ color: primaryColor }}
+                                    />
+                                </Button>
+                            );
+                        })}
                     </div>
                 )}
             </form>
