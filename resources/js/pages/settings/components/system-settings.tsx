@@ -49,7 +49,13 @@ export default function SystemSettings({ settings = {}, timezones = {}, dateForm
         timeFormat: settingsData.timeFormat || defaultSettings.timeFormat,
         calendarStartDay: settingsData.calendarStartDay || defaultSettings.calendarStartDay,
         defaultTimezone: settingsData.defaultTimezone || defaultSettings.defaultTimezone,
-        emailVerification: settingsData.emailVerification === 'true' || settingsData.emailVerification === true || defaultSettings.emailVerification,
+        // Stored as '1'/'0', so the string form has to be matched here too —
+        // without it the switch renders off on first paint despite being on.
+        emailVerification:
+            settingsData.emailVerification === 'true' ||
+            settingsData.emailVerification === true ||
+            settingsData.emailVerification === '1' ||
+            (settingsData.emailVerification === undefined ? defaultSettings.emailVerification : false),
         landingPageEnabled:
             settingsData.landingPageEnabled === 'true' ||
             settingsData.landingPageEnabled === true ||

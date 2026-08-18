@@ -55,7 +55,7 @@ if (! function_exists('settings')) {
         }
 
         if (!$user_id) {
-            return collect();
+            return [];
         }
 
         $userSettings = Setting::where('user_id', $user_id)->pluck('value', 'key')->toArray();
@@ -161,11 +161,15 @@ if (! function_exists('defaultRoleAndSetting')) {
             defultnotificationAndsetting($user->id);
         } elseif ($user->type === 'company') {
             // Only create the defaultLanguage setting, not all default settings
-            $creator = auth()->user();
-            $defaultLanguageSetting = \App\Models\Setting::where('user_id', $creator->id)
-                ->where('key', 'defaultLanguage')
-                ->first();
-            
+            // During public self-registration there is no authenticated user yet,
+            // so fall back to the creator recorded on the new user (created_by).
+            $creator = auth()->user() ?? \App\Models\User::find($user->created_by);
+            $defaultLanguageSetting = $creator
+                ? \App\Models\Setting::where('user_id', $creator->id)
+                    ->where('key', 'defaultLanguage')
+                    ->first()
+                : null;
+
             if ($defaultLanguageSetting) {
                 \App\Models\Setting::updateOrCreate(
                     [

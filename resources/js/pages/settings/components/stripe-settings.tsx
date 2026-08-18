@@ -15,9 +15,9 @@ export default function StripeSettings() {
   const [stripeSettings, setStripeSettings] = useState({
     enabled: false,
     testMode: true,
-    publishableKey: 'pk_test_51AbCdEfGhIjKlMnOpQrStUvWxYz12345678901234',
-    secretKey: 'sk_test_51AbCdEfGhIjKlMnOpQrStUvWxYz12345678901234',
-    webhookSecret: 'whsec_1234567890abcdefghijklmnopqrstuvwxyz1234'
+    publishableKey: '',
+    secretKey: '',
+    webhookSecret: ''
   });
 
   // Password visibility state

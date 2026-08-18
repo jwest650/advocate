@@ -18,6 +18,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Ignore Per-Tenant Mail Settings
+    |--------------------------------------------------------------------------
+    |
+    | By default the SMTP credentials saved under Settings → Email Settings
+    | override the values below for every outbound message. Enable this to pin
+    | delivery to this file (and therefore .env) instead, so saving that form
+    | cannot redirect mail at a different server.
+    |
+    */
+
+    'use_env_only' => env('MAIL_USE_ENV_ONLY', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Mailer Configurations
     |--------------------------------------------------------------------------
     |

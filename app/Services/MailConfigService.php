@@ -8,31 +8,51 @@ use Illuminate\Support\Facades\Config;
 
 class MailConfigService
 {
+    /**
+     * Point the mailer at the tenant's own SMTP credentials.
+     *
+     * Anything the tenant has not configured falls back to the application
+     * defaults from .env rather than to a placeholder host, so a partially
+     * filled — or entirely empty — settings row cannot silently redirect mail
+     * at smtp.example.com and fail every send.
+     */
     public static function setDynamicConfig()
     {
+        // Pinned to .env — the Email Settings form must not redirect delivery.
+        if (config('mail.use_env_only')) {
+            return;
+        }
+
         $user = Auth::user();
         if (!$user) {
             return;
         }
-        if ($user->type == 'superadmin') {
-            $user = User::where('type', 'superadmin')->first();
-        } else if ($user->type == 'company') {
-            $user = User::where('id', $user->created_by)->first();
-        } else {
-            $user = User::where('id', $user->created_by)->first();
+
+        $owner = $user->type == 'superadmin'
+            ? User::where('type', 'superadmin')->first()
+            : User::find($user->created_by);
+
+        if (!$owner) {
+            return;
         }
 
-        $getSettings = settings($user->id);
+        $getSettings = settings($owner->id);
+
+        // With no host stored there is nothing tenant-specific to apply; leaving
+        // the .env configuration untouched keeps mail working out of the box.
+        if (empty($getSettings['email_host'])) {
+            return;
+        }
 
         $settings = [
-            'driver' => $getSettings['email_driver'] ?? 'smtp',
-            'host' => $getSettings['email_host'] ?? 'smtp.example.com',
-            'port' => $getSettings['email_port'] ?? '587',
-            'username' => $getSettings['email_username'] ?? '',
-            'password' => $getSettings['email_password'] ?? '',
-            'encryption' => $getSettings['email_encryption'] ?? 'tls',
-            'fromAddress' => $getSettings['email_from_address'] ?? 'noreply@example.com',
-            'fromName' => $getSettings['email_from_name'] ?? 'WorkDo System'
+            'driver' => $getSettings['email_driver'] ?? config('mail.default'),
+            'host' => $getSettings['email_host'],
+            'port' => $getSettings['email_port'] ?? config('mail.mailers.smtp.port'),
+            'username' => $getSettings['email_username'] ?? config('mail.mailers.smtp.username'),
+            'password' => $getSettings['email_password'] ?? config('mail.mailers.smtp.password'),
+            'encryption' => $getSettings['email_encryption'] ?? config('mail.mailers.smtp.encryption'),
+            'fromAddress' => $getSettings['email_from_address'] ?? config('mail.from.address'),
+            'fromName' => $getSettings['email_from_name'] ?? config('mail.from.name'),
         ];
 
         Config::set([

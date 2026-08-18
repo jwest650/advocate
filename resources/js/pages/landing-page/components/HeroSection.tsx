@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 interface HeroSectionProps {
   brandColor?: string;
-  settings: any;
+  settings?: Record<string, unknown>;
   sectionData: {
     title?: string;
     subtitle?: string;
@@ -23,16 +23,27 @@ interface HeroSectionProps {
   };
 }
 
-export default function HeroSection({ settings, sectionData, brandColor = '#3b82f6' }: HeroSectionProps) {
+export default function HeroSection({ sectionData, brandColor = '#3b82f6' }: HeroSectionProps) {
   const { t } = useTranslation();
+  const fallbackHeroImage = '/screenshots/a-advocate-saas-pic.png';
+
   // Helper to get full URL for images
-  const getImageUrl = (path: string) => {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    return `${window.appSettings.imageUrl}${path}`;
+  const getImageUrl = (path?: string) => {
+    if (!path) return fallbackHeroImage;
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
+
+    const baseUrl = typeof window !== 'undefined' && window.appSettings?.imageUrl ? window.appSettings.imageUrl : '';
+    const normalizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+    if (!normalizedBase) {
+      return normalizedPath;
+    }
+
+    return `${normalizedBase}${normalizedPath}`;
   };
 
-  const heroImage = getImageUrl(sectionData.image);
+  const heroImage = getImageUrl(sectionData.image || fallbackHeroImage);
 
   return (
     <section id="hero" className="pt-16 bg-gray-50 min-h-screen flex items-center">

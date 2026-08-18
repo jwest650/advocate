@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -119,7 +120,22 @@ class RegisteredUserController extends Controller
         // Check if email verification is enabled
         $emailVerificationEnabled = getSetting('emailVerification', false);
         if ($emailVerificationEnabled) {
-            event(new Registered($user));
+            // The verification notification is not queued, so it sends inside this
+            // request. A misconfigured or unreachable SMTP server must not turn a
+            // successful sign-up into a 500 — the account already exists at this
+            // point, and the notice page offers a resend.
+            try {
+                event(new Registered($user));
+            } catch (\Throwable $e) {
+                Log::error('Failed to send registration verification email', [
+                    'user_id' => $user->id,
+                    'exception' => $e->getMessage(),
+                ]);
+
+                return redirect()->route('verification.notice')
+                    ->with('status', 'verification-link-failed');
+            }
+
             return redirect()->route('verification.notice');
         }
 

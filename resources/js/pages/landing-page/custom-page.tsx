@@ -31,17 +31,22 @@ interface PageProps {
     config_sections?: {
       sections?: Array<{
         key: string;
-        [key: string]: any;
+        [key: string]: unknown;
       }>;
+      theme?: {
+        primary_color?: string;
+        secondary_color?: string;
+        accent_color?: string;
+      };
     };
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
 export default function CustomPage() {
-  const pageProps = usePage<PageProps>();
+  const pageProps = usePage<PageProps & { globalSettings?: { is_demo?: boolean; layoutDirection?: 'left' | 'right' } }>();
   const { page, customPages = [], settings } = pageProps.props;
-  const globalSettings = (pageProps.props as any).globalSettings;
+  const globalSettings = pageProps.props.globalSettings;
 
   // RTL Support for custom pages
   React.useEffect(() => {
@@ -75,7 +80,7 @@ export default function CustomPage() {
     const dir = storedPosition === 'right' ? 'rtl' : 'ltr';
     document.documentElement.dir = dir;
     document.documentElement.setAttribute('dir', dir);
-  }, [globalSettings]);
+  }, [globalSettings?.is_demo, globalSettings?.layoutDirection]);
   
 React.useEffect(() => {
     const isDemo = globalSettings?.is_demo || false;
@@ -117,7 +122,7 @@ React.useEffect(() => {
         document.documentElement.setAttribute('dir', dir);
       }
     }, 1);
-  }, []);
+  }, [globalSettings?.is_demo, globalSettings?.layoutDirection]);
 
 
 
@@ -201,19 +206,46 @@ React.useEffect(() => {
         />
 
         <main className="pt-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div className="max-w-4xl mx-auto">
-              <header className="text-center mb-12">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4 text-center">{page.title}</h1>
-                <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-purple-600 mx-auto rounded-full"></div>
-              </header>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+            <div className="overflow-hidden rounded-[32px] border border-slate-200/80 bg-white/80 shadow-[0_30px_80px_-24px_rgba(15,23,42,0.2)] backdrop-blur">
+              <div className="border-b border-slate-200/70 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-8 py-10 lg:px-10 lg:py-12">
+                <div className="max-w-4xl">
+                  <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-slate-600">
+                    Legal operations
+                  </span>
+                  <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
+                    {page.title}
+                  </h1>
+                  <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-600">
+                    A polished experience designed for modern legal services, professional workflows, and streamlined client engagement.
+                  </p>
+                </div>
+              </div>
 
-              <article className="prose prose-lg max-w-none">
-                <div
-                  className="text-gray-700 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: page.content }}
-                />
-              </article>
+              <div className="grid gap-8 p-8 lg:grid-cols-[1.15fr_0.85fr] lg:p-10">
+                <article className="prose prose-lg max-w-none">
+                  <div
+                    className="text-slate-700 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: page.content }}
+                  />
+                </article>
+
+                <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/70 p-3 shadow-sm">
+                  <img
+                    src="/screenshots/a-advocate-saas-pic.png"
+                    alt={page.title}
+                    loading="lazy"
+                    className="w-full rounded-[18px] object-cover"
+                    style={{ aspectRatio: '4 / 3' }}
+                  />
+                  <div className="mt-4 rounded-[18px] border border-slate-200 bg-white/80 p-4">
+                    <p className="text-sm font-semibold text-slate-900">Professional legal experience</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      Modern visuals, thoughtful structure, and a high-trust presentation tailored to legal services.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </main>

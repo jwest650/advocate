@@ -6,6 +6,7 @@ import { useSidebarSettings } from '@/contexts/SidebarContext';
 import { type NavItem } from '@/types';
 import { hasPermission } from '@/utils/authorization';
 import { getImagePath } from '@/utils/helpers';
+import { isSuperAdminRole, normalizeUserRole } from '@/utils/rolePermissions';
 import { Link, usePage } from '@inertiajs/react';
 import {
     Bell,
@@ -32,13 +33,11 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 export function AppSidebar() {
-    const { t, i18n } = useTranslation();
-    const { auth } = usePage().props as any;
-    const userRole = auth.user?.type || auth.user?.role;
+    const { t } = useTranslation();
+    const { auth } = usePage<{ auth: { user?: { type?: string; role?: string }; permissions?: string[]; roles?: string[] } }>().props;
+    const userRole = normalizeUserRole(auth.user?.type || auth.user?.role || auth.roles?.[0] || '');
     const permissions = auth?.permissions || [];
-
-    // Get current direction
-    const isRtl = document.documentElement.dir === 'rtl';
+    const isSuperAdmin = isSuperAdminRole(userRole);
 
     // Business switch handler removed
 
@@ -889,9 +888,9 @@ export function AppSidebar() {
         return items;
     };
 
-    const mainNavItems = userRole === 'superadmin' ? getSuperAdminNavItems() : getCompanyNavItems();
+    const mainNavItems = isSuperAdmin ? getSuperAdminNavItems() : getCompanyNavItems();
 
-    const { position, effectivePosition } = useLayout();
+    const { effectivePosition } = useLayout();
     const { variant, collapsible, style } = useSidebarSettings();
     const { logoLight, logoDark, favicon, updateBrandSettings } = useBrand();
     const [sidebarStyle, setSidebarStyle] = useState({});

@@ -33,9 +33,13 @@ export default function VerifyEmail({ status }: { status?: string }) {
             title={t("Verify your email")}
             description={t("Please verify your email address by clicking on the link we just emailed to you.")}
             icon={<Mail className="h-7 w-7" style={{ color: primaryColor }} />}
-            status={status === 'verification-link-sent' ? 
-                t("A new verification link has been sent to the email address you provided during registration.") : 
-                undefined}
+            status={
+                status === 'verification-link-sent'
+                    ? t("A new verification link has been sent to the email address you provided during registration.")
+                    : status === 'verification-link-failed'
+                      ? t("We couldn't send the verification email. Please check your mail settings or try resending.")
+                      : undefined
+            }
         >
             <form onSubmit={submit} className="space-y-5">
                 <button 
